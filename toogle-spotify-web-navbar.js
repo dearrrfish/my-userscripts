@@ -2,7 +2,7 @@
 // @name         Spotify Web Sidebar Toggler
 // @description  Adds the ability to toggle the main sidebar on Spotify Web using a keyboard shortcut (ctrl + alt + B), original code from https://github.com/dumptyd/slack-sidebar-toggler
 // @author       dearrrfish (http://github.com/dearrrfish)
-// @version      1.0.0
+// @version      1.0.1
 // @namespace    http://github.com/dearrrfish
 // @include      https://open.spotify.com/*
 // @grant        GM_addStyle
@@ -56,14 +56,18 @@
   const style = {
     leftSidebarCollapsedClassName: 'SST-left-sidebar-collapsed',
     leftSidebarWidth: '230px',
-    gridSelector: '.Root__nav-bar'
+    navbarSelector: '.Root__nav-bar',
+    topbarSelector: '.Root__top-bar header'
   };
   GM_addStyle(`
-    .${style.leftSidebarCollapsedClassName} ${style.gridSelector} {
+    .${style.leftSidebarCollapsedClassName} ${style.topbarSelector} {
+      max-width: 100vw;
+    }
+    .${style.leftSidebarCollapsedClassName} ${style.navbarSelector} {
       width: 0;
       transform: translate(-${style.leftSidebarWidth});
     }
-    ${style.gridSelector} {
+    ${style.navbarSelector} {
       transition: .2s transform;
     }
   `);
