@@ -2,7 +2,7 @@
 // @name         Slack Web Sidebar Toggler
 // @description  Adds the ability to toggle the main sidebar on Spotify Web using a keyboard shortcut (ctrl + alt + B), inspired by https://github.com/dumptyd/slack-sidebar-toggler
 // @author       dearrrfish (http://github.com/dearrrfish)
-// @version      1.0.0
+// @version      1.0.1
 // @namespace    http://github.com/dearrrfish
 // @include      https://app.slack.com/client/*
 // @grant        GM_addStyle
@@ -62,7 +62,8 @@
     clientSelector: '.p-client',
     workspaceSelector: '.p-workspace',
     expandedWorkspaceSelector: '.p-workspace.p-workspace--context-pane-expanded',
-    searchPopoverModalSelector: '.c-search_modal > .popover'
+    searchPopoverModalSelector: '.c-search_modal > .popover',
+    newMessageButtonSelector: '.p-workspace .p-unreads_view__empty--show_new > button',
   };
   GM_addStyle(`
 
@@ -157,6 +158,14 @@ ${style.workspaceSelector} > div {
         clearInterval(checkMainViewExist);
       }
     }, 500)
+
+    // Click new unread message button automatically
+    setInterval(() => {
+      const newMessageButton = document.querySelector(style.newMessageButtonSelector);
+      if (newMessageButton) {
+        newMessageButton.click();
+      }
+    }, 5000)
 
   });
 })();
