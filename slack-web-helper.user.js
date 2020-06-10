@@ -2,7 +2,7 @@
 // @name         Slack Web Helper
 // @description  Enhances Slack web app.
 // @author       dearrrfish (http://github.com/dearrrfish)
-// @version      1.0.0
+// @version      1.0.1
 // @namespace    http://github.com/dearrrfish
 // @include      https://app.slack.com/client/*
 // @grant        GM_addStyle
@@ -50,7 +50,7 @@
     // Click new unread message button automatically
     setInterval(() => {
       const newMessageButton = document.querySelector('.p-workspace-layout .p-unreads_view__empty--show_new > button');
-      const newMessageSyncButton = document.querySelector('.p-workspace-layout > div[aria-label="All unreads"] .p-ia__view_header > button');
+      const newMessageSyncButton = document.querySelector('.p-workspace-layout > div[aria-label="All unreads"] .p-ia__view_header > button:not(.p-ia__view_header__sidebar_toggle_button');
       if (newMessageButton) {
         newMessageButton.click();
       }
