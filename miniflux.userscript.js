@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             Miniflux Personal Scripts
 // @namespace        https://userscript.yjin.dev
-// @include          https://miniflux.*
+// @match            https://miniflux.yjin.dev
 // @version          1.0
 // ==/UserScript==
 

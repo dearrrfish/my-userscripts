@@ -1,0 +1,58 @@
+/*
+==UserCSS==
+@name             Miniflux Personal Styles
+@namespace        https://userscript.yjin.dev
+@match            https://miniflux.yjin.dev
+@version          1.0
+==/UserCSS==
+*/
+
+body {
+  max-width: 96vw;
+}
+
+.page-header > * {
+  display: inline;
+  margin-right: 1rem;
+}
+
+/* a.page-link, */
+/* button.page-button { */
+/*   font-size: 0; */
+/* } */
+
+.item {
+  margin-bottom: 2px;
+  vertical-align: center;
+  display: flex;
+}
+.item-header {
+  flex: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.current-item .item-header,
+.item-header:hover {
+  white-space: wrap;
+}
+.item-meta {
+  float: right;
+  flex: 0 0 auto;
+}
+
+.item-meta-info {
+  display: none;
+}
+.item-meta ul {
+  margin-top: 0;
+}
+.item-meta-icons li {
+  margin: 0;
+}
+.item-meta-icons li a,
+.item-meta-icons li button {
+  margin-top: 0 !important;
+  font-size: 0;
+}
