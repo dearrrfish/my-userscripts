@@ -1,0 +1,15 @@
+.*/skills/team-*/
+.*/agents/coordinator*
+.*/agents/explorer*
+.*/agents/design-agent*
+.*/agents/implementer*
+.*/agents/ops*
+.*/agents/reviewer*
+.worktrees/
+.agent-team/runs/
+.agent-team/backups/
+.agent-team/install-state.json
+/.agent-team/templates/prompts/plan.md
+/.agent-team/templates/prompts/coordinate.md
+/.agent-team/templates/prompts/review.md
+/.agent-team/templates/prompts/discovery.md

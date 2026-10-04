@@ -1,0 +1,4 @@
+# Project exceptions override live user defaults in ~/.agent-team/team.toml.
+# Set inherit_user_defaults = false to isolate this project.
+schema_version = 1
+inherit_user_defaults = true
