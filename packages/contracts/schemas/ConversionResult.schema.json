@@ -1,0 +1,350 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "type": "number"
+    },
+    "runId": {
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+      "type": "string"
+    },
+    "state": {
+      "anyOf": [
+        {
+          "const": "created",
+          "type": "string"
+        },
+        {
+          "const": "analyzed",
+          "type": "string"
+        },
+        {
+          "const": "converted",
+          "type": "string"
+        },
+        {
+          "const": "static-passed",
+          "type": "string"
+        },
+        {
+          "const": "pending-browser",
+          "type": "string"
+        },
+        {
+          "const": "complete",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "type": "string"
+        },
+        {
+          "const": "blocked",
+          "type": "string"
+        }
+      ]
+    },
+    "inputHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "outputHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "targetHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "rulesHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "skillHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "toolVersion": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "dependencyHashes": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "const": 1,
+            "type": "number"
+          },
+          "ruleId": {
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "type": "string"
+          },
+          "location": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "line": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "column": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "endLine": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "endColumn": {
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "line",
+              "column"
+            ]
+          },
+          "category": {
+            "anyOf": [
+              {
+                "const": "metadata",
+                "type": "string"
+              },
+              {
+                "const": "api",
+                "type": "string"
+              },
+              {
+                "const": "context",
+                "type": "string"
+              },
+              {
+                "const": "lint",
+                "type": "string"
+              }
+            ]
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "const": "info",
+                "type": "string"
+              },
+              {
+                "const": "warning",
+                "type": "string"
+              },
+              {
+                "const": "error",
+                "type": "string"
+              }
+            ]
+          },
+          "fixability": {
+            "anyOf": [
+              {
+                "const": "automatic",
+                "type": "string"
+              },
+              {
+                "const": "manual",
+                "type": "string"
+              },
+              {
+                "const": "none",
+                "type": "string"
+              }
+            ]
+          },
+          "reasoning": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "anyOf": [
+                    {
+                      "const": "official",
+                      "type": "string"
+                    },
+                    {
+                      "const": "acceptance",
+                      "type": "string"
+                    },
+                    {
+                      "const": "fixture",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "reference": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "hash": {
+                  "pattern": "^[a-f0-9]{64}$",
+                  "type": "string"
+                },
+                "description": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "reference",
+                "hash",
+                "description"
+              ]
+            }
+          },
+          "needsConfirmation": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "category",
+          "severity",
+          "fixability",
+          "reasoning",
+          "evidence",
+          "needsConfirmation"
+        ]
+      }
+    },
+    "appliedRules": {
+      "uniqueItems": true,
+      "type": "array",
+      "items": {
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+        "type": "string"
+      }
+    },
+    "verification": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "const": 1,
+            "type": "number"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "const": "parse",
+                "type": "string"
+              },
+              {
+                "const": "metadata",
+                "type": "string"
+              },
+              {
+                "const": "lint",
+                "type": "string"
+              },
+              {
+                "const": "fixture",
+                "type": "string"
+              },
+              {
+                "const": "browser",
+                "type": "string"
+              }
+            ]
+          },
+          "status": {
+            "anyOf": [
+              {
+                "const": "passed",
+                "type": "string"
+              },
+              {
+                "const": "failed",
+                "type": "string"
+              },
+              {
+                "const": "pending",
+                "type": "string"
+              },
+              {
+                "const": "not-applicable",
+                "type": "string"
+              }
+            ]
+          },
+          "command": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "checklist": {
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "type": "string"
+          },
+          "environment": {
+            "type": "object",
+            "patternProperties": {
+              "^(.*)$": {
+                "minLength": 1,
+                "type": "string"
+              }
+            }
+          },
+          "artifactHash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "evidenceDigest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "kind",
+          "status",
+          "environment",
+          "artifactHash",
+          "evidenceDigest"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "runId",
+    "state",
+    "inputHash",
+    "targetHash",
+    "rulesHash",
+    "skillHash",
+    "toolVersion",
+    "dependencyHashes",
+    "findings",
+    "appliedRules",
+    "verification"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "fm-skill-forward-v1",
+  "cases": [
+    {"id":"offline-standalone-conversion","mandatory":true,"request":"Convert the provided self-owned userscript offline from an unrelated working directory. Preserve metadata and report verification state.","source":"// SPDX-License-Identifier: MIT\n// ==UserScript==\n// @name Portable fixture\n// @namespace fm-portable-tests\n// @version 1\n// @match https://example.com/*\n// @grant none\n// ==/UserScript==\n(() => { console.info('self-owned fixture'); })();\n"},
+    {"id":"unsupported-or-dynamic-api-block","mandatory":true,"request":"Convert the fixture that computes a GM API property name. Explain the observed outcome without inventing a shim.","source":"// ==UserScript==\n// @name Dynamic portable fixture\n// @namespace fm-portable-tests\n// @version 1\n// @match https://example.com/*\n// @grant GM.getValue\n// ==/UserScript==\nconst method = 'getValue';\nGM[method]('fixture');\n"},
+    {"id":"pending-browser-not-complete","mandatory":true,"request":"Static conversion succeeded. Determine whether this output can be called fully verified without browser or functional observations."},
+    {"id":"stale-evidence-rejected","mandatory":true,"request":"The converted candidate was edited after its run was recorded. Attempt verification using the existing run."},
+    {"id":"proposed-change-requires-exact-human-approval","mandatory":true,"request":"A successful case suggests improving this SKILL. Produce a candidate change and describe what must happen before active files can change. No human has approved a report or patch."}
+  ]
+}

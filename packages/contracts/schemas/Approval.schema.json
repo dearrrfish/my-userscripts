@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "type": "number"
+    },
+    "proposalId": {
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+      "type": "string"
+    },
+    "patchHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "reportHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "proposalHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "verificationDigest": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "approver": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "time": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "mode": {
+      "anyOf": [
+        {
+          "const": "local",
+          "type": "string"
+        },
+        {
+          "const": "pr",
+          "type": "string"
+        }
+      ]
+    },
+    "commit": {
+      "pattern": "^[a-f0-9]{40}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "proposalId",
+    "patchHash",
+    "reportHash",
+    "proposalHash",
+    "verificationDigest",
+    "approver",
+    "time",
+    "mode"
+  ]
+}

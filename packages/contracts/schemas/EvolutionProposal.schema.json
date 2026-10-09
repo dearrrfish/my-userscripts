@@ -1,0 +1,140 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "type": "number"
+    },
+    "id": {
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+      "type": "string"
+    },
+    "originatingRun": {
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+      "type": "string"
+    },
+    "baseHashes": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        }
+      }
+    },
+    "patchHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "reportHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "proposalHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "verificationDigest": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "changes": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "path": {
+            "minLength": 1,
+            "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+            "type": "string"
+          },
+          "beforeHash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "afterHash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "afterHash"
+        ]
+      }
+    },
+    "reason": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "regressionFixtures": {
+      "minItems": 1,
+      "uniqueItems": true,
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+        "type": "string"
+      }
+    },
+    "scope": {
+      "anyOf": [
+        {
+          "const": "rules",
+          "type": "string"
+        },
+        {
+          "const": "skill",
+          "type": "string"
+        },
+        {
+          "const": "both",
+          "type": "string"
+        }
+      ]
+    },
+    "status": {
+      "anyOf": [
+        {
+          "const": "proposed",
+          "type": "string"
+        },
+        {
+          "const": "approved",
+          "type": "string"
+        },
+        {
+          "const": "rejected",
+          "type": "string"
+        },
+        {
+          "const": "stale",
+          "type": "string"
+        },
+        {
+          "const": "applied",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "originatingRun",
+    "baseHashes",
+    "patchHash",
+    "reportHash",
+    "proposalHash",
+    "verificationDigest",
+    "changes",
+    "reason",
+    "regressionFixtures",
+    "scope",
+    "status"
+  ]
+}

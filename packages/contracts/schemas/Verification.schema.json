@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "type": "number"
+    },
+    "kind": {
+      "anyOf": [
+        {
+          "const": "parse",
+          "type": "string"
+        },
+        {
+          "const": "metadata",
+          "type": "string"
+        },
+        {
+          "const": "lint",
+          "type": "string"
+        },
+        {
+          "const": "fixture",
+          "type": "string"
+        },
+        {
+          "const": "browser",
+          "type": "string"
+        }
+      ]
+    },
+    "status": {
+      "anyOf": [
+        {
+          "const": "passed",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "type": "string"
+        },
+        {
+          "const": "pending",
+          "type": "string"
+        },
+        {
+          "const": "not-applicable",
+          "type": "string"
+        }
+      ]
+    },
+    "command": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "checklist": {
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+      "type": "string"
+    },
+    "environment": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {
+          "minLength": 1,
+          "type": "string"
+        }
+      }
+    },
+    "artifactHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "evidenceDigest": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "kind",
+    "status",
+    "environment",
+    "artifactHash",
+    "evidenceDigest"
+  ]
+}

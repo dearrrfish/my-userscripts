@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "id": "greasyfork-454120.storage-grant-review",
+  "revision": 1,
+  "scope": "script",
+  "targetRange": {
+    "profileIds": [
+      "firemonkey-3.9-firefox-157.0"
+    ],
+    "fm": "=3.9",
+    "firefox": "=157.0"
+  },
+  "category": "api",
+  "severity": "info",
+  "matcher": {
+    "kind": "metadata",
+    "query": "grant.storage-dual-alias"
+  },
+  "preconditions": [
+    {
+      "kind": "inputHash",
+      "query": "d9a695411c681a12c494de131b580f22c2943f237689a8aea5fe8a07b97b62fb"
+    },
+    {
+      "kind": "ast",
+      "query": "binding.initGM.storage-fallback"
+    }
+  ],
+  "action": {
+    "kind": "guidance",
+    "guidance": {
+      "steps": [
+        "Run the unchanged v98 baseline in the pinned Firefox/FireMonkey target and record a concrete failure before proposing edits.",
+        "Inspect initGM modern and legacy branches, lexical GM binding, Promise behavior and value serialization against grant-gated mappings. Both storage API families are supported; mixed grants alone are not a runtime defect.",
+        "If evidence requires a change, preserve storage semantics and permission scope; do not blindly strip grants or substitute sync/async calls. Revalidate the exact candidate and obtain browser acceptance."
+      ],
+      "riskConfirmation": true,
+      "requiredEvidence": [
+        "Unmodified v98 baseline browser observation bound to input hash",
+        "Concrete failure location and reproducible steps",
+        "Candidate static checks and real browser acceptance bound to output hash"
+      ],
+      "postconditions": [
+        {
+          "kind": "ast",
+          "query": "review.storage-semantics-preserved"
+        }
+      ]
+    }
+  },
+  "postconditions": [],
+  "dependencies": [],
+  "conflicts": [],
+  "evidence": [
+    {
+      "kind": "official",
+      "reference": "https://raw.githubusercontent.com/erosman/firemonkey/8da260defe9857d4c8461f8fb78a18ee22f9e62f/src/content/api-gm.js",
+      "hash": "b9a73579ced143768db7693ef3bdff5aea8c2d490ca8eca263396104bd7d008d",
+      "description": "Both grant-gated storage families are implemented; semantics must be assessed before changing initGM."
+    },
+    {
+      "kind": "fixture",
+      "reference": "config/sources/greasyfork-454120.lock.json",
+      "hash": "c6e69f781112ec7cce3d9eb1d88f6c1a94f45055be36993cc3f7c64d6c5f2afa",
+      "description": "Source lock binds v98 upstream metadata and exact bytes; author 遠坂凛, MIT. Guidance only, no runtime failure asserted."
+    }
+  ],
+  "scriptId": "greasyfork-454120",
+  "identity": {
+    "name": "南加北加论坛强化脚本(凛+)",
+    "namespace": "tousakarin"
+  }
+}

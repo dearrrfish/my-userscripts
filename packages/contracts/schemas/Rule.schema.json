@@ -1,0 +1,825 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "anyOf": [
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1,
+          "type": "number"
+        },
+        "id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+          "type": "string"
+        },
+        "revision": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "targetRange": {
+          "additionalProperties": false,
+          "type": "object",
+          "properties": {
+            "profileIds": {
+              "minItems": 1,
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+                "type": "string"
+              }
+            },
+            "fm": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "firefox": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "profileIds",
+            "fm",
+            "firefox"
+          ]
+        },
+        "category": {
+          "anyOf": [
+            {
+              "const": "metadata",
+              "type": "string"
+            },
+            {
+              "const": "api",
+              "type": "string"
+            },
+            {
+              "const": "context",
+              "type": "string"
+            },
+            {
+              "const": "lint",
+              "type": "string"
+            }
+          ]
+        },
+        "severity": {
+          "anyOf": [
+            {
+              "const": "info",
+              "type": "string"
+            },
+            {
+              "const": "warning",
+              "type": "string"
+            },
+            {
+              "const": "error",
+              "type": "string"
+            }
+          ]
+        },
+        "matcher": {
+          "additionalProperties": false,
+          "type": "object",
+          "properties": {
+            "kind": {
+              "anyOf": [
+                {
+                  "const": "metadata",
+                  "type": "string"
+                },
+                {
+                  "const": "ast",
+                  "type": "string"
+                }
+              ]
+            },
+            "query": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "query"
+          ]
+        },
+        "preconditions": {
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "kind": {
+                "anyOf": [
+                  {
+                    "const": "metadata",
+                    "type": "string"
+                  },
+                  {
+                    "const": "ast",
+                    "type": "string"
+                  },
+                  {
+                    "const": "inputHash",
+                    "type": "string"
+                  },
+                  {
+                    "const": "target",
+                    "type": "string"
+                  },
+                  {
+                    "const": "identity",
+                    "type": "string"
+                  }
+                ]
+              },
+              "query": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "query"
+            ]
+          }
+        },
+        "action": {
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "transform",
+                  "type": "string"
+                },
+                "transformId": {
+                  "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+                  "type": "string"
+                },
+                "args": {
+                  "type": "object",
+                  "patternProperties": {
+                    "^(.*)$": {}
+                  }
+                }
+              },
+              "required": [
+                "kind",
+                "transformId"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "diagnose",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "guidance",
+                  "type": "string"
+                },
+                "guidance": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "properties": {
+                    "steps": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "riskConfirmation": {
+                      "type": "boolean"
+                    },
+                    "requiredEvidence": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "postconditions": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "anyOf": [
+                              {
+                                "const": "metadata",
+                                "type": "string"
+                              },
+                              {
+                                "const": "ast",
+                                "type": "string"
+                              },
+                              {
+                                "const": "inputHash",
+                                "type": "string"
+                              },
+                              {
+                                "const": "target",
+                                "type": "string"
+                              },
+                              {
+                                "const": "identity",
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "query": {
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "query"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "steps",
+                    "riskConfirmation",
+                    "requiredEvidence",
+                    "postconditions"
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "guidance"
+              ]
+            }
+          ]
+        },
+        "postconditions": {
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "kind": {
+                "anyOf": [
+                  {
+                    "const": "metadata",
+                    "type": "string"
+                  },
+                  {
+                    "const": "ast",
+                    "type": "string"
+                  },
+                  {
+                    "const": "inputHash",
+                    "type": "string"
+                  },
+                  {
+                    "const": "target",
+                    "type": "string"
+                  },
+                  {
+                    "const": "identity",
+                    "type": "string"
+                  }
+                ]
+              },
+              "query": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "query"
+            ]
+          }
+        },
+        "dependencies": {
+          "uniqueItems": true,
+          "type": "array",
+          "items": {
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "type": "string"
+          }
+        },
+        "conflicts": {
+          "uniqueItems": true,
+          "type": "array",
+          "items": {
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "type": "string"
+          }
+        },
+        "evidence": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "kind": {
+                "anyOf": [
+                  {
+                    "const": "official",
+                    "type": "string"
+                  },
+                  {
+                    "const": "acceptance",
+                    "type": "string"
+                  },
+                  {
+                    "const": "fixture",
+                    "type": "string"
+                  }
+                ]
+              },
+              "reference": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "hash": {
+                "pattern": "^[a-f0-9]{64}$",
+                "type": "string"
+              },
+              "description": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "reference",
+              "hash",
+              "description"
+            ]
+          }
+        },
+        "scope": {
+          "const": "shared",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "revision",
+        "targetRange",
+        "category",
+        "severity",
+        "matcher",
+        "preconditions",
+        "action",
+        "postconditions",
+        "dependencies",
+        "conflicts",
+        "evidence",
+        "scope"
+      ]
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1,
+          "type": "number"
+        },
+        "id": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+          "type": "string"
+        },
+        "revision": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "targetRange": {
+          "additionalProperties": false,
+          "type": "object",
+          "properties": {
+            "profileIds": {
+              "minItems": 1,
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+                "type": "string"
+              }
+            },
+            "fm": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "firefox": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "profileIds",
+            "fm",
+            "firefox"
+          ]
+        },
+        "category": {
+          "anyOf": [
+            {
+              "const": "metadata",
+              "type": "string"
+            },
+            {
+              "const": "api",
+              "type": "string"
+            },
+            {
+              "const": "context",
+              "type": "string"
+            },
+            {
+              "const": "lint",
+              "type": "string"
+            }
+          ]
+        },
+        "severity": {
+          "anyOf": [
+            {
+              "const": "info",
+              "type": "string"
+            },
+            {
+              "const": "warning",
+              "type": "string"
+            },
+            {
+              "const": "error",
+              "type": "string"
+            }
+          ]
+        },
+        "matcher": {
+          "additionalProperties": false,
+          "type": "object",
+          "properties": {
+            "kind": {
+              "anyOf": [
+                {
+                  "const": "metadata",
+                  "type": "string"
+                },
+                {
+                  "const": "ast",
+                  "type": "string"
+                }
+              ]
+            },
+            "query": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "query"
+          ]
+        },
+        "preconditions": {
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "kind": {
+                "anyOf": [
+                  {
+                    "const": "metadata",
+                    "type": "string"
+                  },
+                  {
+                    "const": "ast",
+                    "type": "string"
+                  },
+                  {
+                    "const": "inputHash",
+                    "type": "string"
+                  },
+                  {
+                    "const": "target",
+                    "type": "string"
+                  },
+                  {
+                    "const": "identity",
+                    "type": "string"
+                  }
+                ]
+              },
+              "query": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "query"
+            ]
+          }
+        },
+        "action": {
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "transform",
+                  "type": "string"
+                },
+                "transformId": {
+                  "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+                  "type": "string"
+                },
+                "args": {
+                  "type": "object",
+                  "patternProperties": {
+                    "^(.*)$": {}
+                  }
+                }
+              },
+              "required": [
+                "kind",
+                "transformId"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "diagnose",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "guidance",
+                  "type": "string"
+                },
+                "guidance": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "properties": {
+                    "steps": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "riskConfirmation": {
+                      "type": "boolean"
+                    },
+                    "requiredEvidence": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "postconditions": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "anyOf": [
+                              {
+                                "const": "metadata",
+                                "type": "string"
+                              },
+                              {
+                                "const": "ast",
+                                "type": "string"
+                              },
+                              {
+                                "const": "inputHash",
+                                "type": "string"
+                              },
+                              {
+                                "const": "target",
+                                "type": "string"
+                              },
+                              {
+                                "const": "identity",
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "query": {
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "query"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "steps",
+                    "riskConfirmation",
+                    "requiredEvidence",
+                    "postconditions"
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "guidance"
+              ]
+            }
+          ]
+        },
+        "postconditions": {
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "kind": {
+                "anyOf": [
+                  {
+                    "const": "metadata",
+                    "type": "string"
+                  },
+                  {
+                    "const": "ast",
+                    "type": "string"
+                  },
+                  {
+                    "const": "inputHash",
+                    "type": "string"
+                  },
+                  {
+                    "const": "target",
+                    "type": "string"
+                  },
+                  {
+                    "const": "identity",
+                    "type": "string"
+                  }
+                ]
+              },
+              "query": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "query"
+            ]
+          }
+        },
+        "dependencies": {
+          "uniqueItems": true,
+          "type": "array",
+          "items": {
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "type": "string"
+          }
+        },
+        "conflicts": {
+          "uniqueItems": true,
+          "type": "array",
+          "items": {
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "type": "string"
+          }
+        },
+        "evidence": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "kind": {
+                "anyOf": [
+                  {
+                    "const": "official",
+                    "type": "string"
+                  },
+                  {
+                    "const": "acceptance",
+                    "type": "string"
+                  },
+                  {
+                    "const": "fixture",
+                    "type": "string"
+                  }
+                ]
+              },
+              "reference": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "hash": {
+                "pattern": "^[a-f0-9]{64}$",
+                "type": "string"
+              },
+              "description": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "reference",
+              "hash",
+              "description"
+            ]
+          }
+        },
+        "scope": {
+          "const": "script",
+          "type": "string"
+        },
+        "scriptId": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+          "type": "string"
+        },
+        "identity": {
+          "additionalProperties": false,
+          "type": "object",
+          "properties": {
+            "name": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "namespace": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "namespace"
+          ]
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "revision",
+        "targetRange",
+        "category",
+        "severity",
+        "matcher",
+        "preconditions",
+        "action",
+        "postconditions",
+        "dependencies",
+        "conflicts",
+        "evidence",
+        "scope",
+        "scriptId",
+        "identity"
+      ]
+    }
+  ]
+}

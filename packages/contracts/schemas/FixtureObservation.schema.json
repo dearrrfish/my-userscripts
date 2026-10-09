@@ -1,0 +1,150 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "type": "number"
+    },
+    "runId": {
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+      "type": "string"
+    },
+    "inputHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "outputHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "dependencyHashes": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        }
+      }
+    },
+    "targetHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "rulesHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "skillHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "toolVersion": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "suiteId": {
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+      "type": "string"
+    },
+    "suiteHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "verifier": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "timestamp": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "confirmationSource": {
+      "anyOf": [
+        {
+          "const": "coding-tool",
+          "type": "string"
+        },
+        {
+          "const": "cli",
+          "type": "string"
+        }
+      ]
+    },
+    "cases": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "type": "string"
+          },
+          "mandatory": {
+            "type": "boolean"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "const": "passed",
+                "type": "string"
+              },
+              {
+                "const": "failed",
+                "type": "string"
+              },
+              {
+                "const": "pending",
+                "type": "string"
+              },
+              {
+                "const": "not-applicable",
+                "type": "string"
+              }
+            ]
+          },
+          "command": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "evidence": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "mandatory",
+          "status",
+          "command",
+          "evidence"
+        ]
+      }
+    },
+    "evidenceDigest": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "runId",
+    "inputHash",
+    "outputHash",
+    "dependencyHashes",
+    "targetHash",
+    "rulesHash",
+    "skillHash",
+    "toolVersion",
+    "suiteId",
+    "suiteHash",
+    "verifier",
+    "timestamp",
+    "confirmationSource",
+    "cases",
+    "evidenceDigest"
+  ]
+}

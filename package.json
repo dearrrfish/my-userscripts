@@ -1,0 +1,19 @@
+{
+  "name": "fm-userscript-workspace",
+  "private": true,
+  "engines": {
+    "node": ">=24.21.0 <25",
+    "pnpm": "12.3.4"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:profiles": "node scripts/test-profiles.mjs",
+    "test:privacy": "node scripts/test-privacy.mjs",
+    "fm": "node packages/cli/src/main.mjs",
+    "test:release": "node scripts/test-release.mjs",
+    "bundle": "node scripts/bundle.mjs",
+    "test:portable": "node scripts/test-portable.mjs"
+  }
+}

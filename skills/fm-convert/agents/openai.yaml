@@ -1,0 +1,4 @@
+interface:
+  display_name: "FireMonkey Converter"
+  short_description: "Convert userscripts with exact FireMonkey evidence"
+  default_prompt: "Use $fm-convert to convert this userscript and report FireMonkey compatibility evidence."

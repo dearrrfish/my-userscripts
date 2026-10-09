@@ -1,0 +1,32 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as fs from 'node:fs/promises';
+import path from 'node:path';
+import {skillResourceIdentity,hashSkillResources,resolveRuntimeLayout,skillBehaviorDigest,checkContract} from '../dist/index.js';
+const root=path.resolve(import.meta.dirname,'../../..');
+const h='a'.repeat(64);
+test('skill resource identity covers additions/removals and relocates across source and portable layouts',async()=>{
+ const dir=await fs.mkdtemp(path.join(root,'.fm/contracts-layout-'));
+ const skill=path.join(dir,'skills/fm-convert');await fs.mkdir(path.join(skill,'references'),{recursive:true});
+ await fs.writeFile(path.join(skill,'SKILL.md'),'Stable entry\n');
+ const initial=await skillResourceIdentity(skill);assert.equal(initial.hash,hashSkillResources(initial.files));
+ await fs.writeFile(path.join(skill,'SKILL.md'),'\ufeffStable entry\n');assert.notEqual((await skillResourceIdentity(skill)).hash,initial.hash);
+ await fs.writeFile(path.join(skill,'SKILL.md'),'Stable entry\n');
+ const alias=path.join(dir,'alias');await fs.symlink(skill,alias);await assert.rejects(skillResourceIdentity(alias),/symlink or alias/);
+ assert.equal((await resolveRuntimeLayout(dir)).mode,'source');
+ await fs.writeFile(path.join(skill,'references/api.md'),'Reference bytes');
+ const changed=await skillResourceIdentity(skill);assert.notEqual(changed.hash,initial.hash);
+ await fs.unlink(path.join(skill,'references/api.md'));assert.equal((await skillResourceIdentity(skill)).hash,initial.hash);
+ const portable=path.join(dir,'portable');await fs.mkdir(path.join(portable,'runtime'),{recursive:true});await fs.writeFile(path.join(portable,'SKILL.md'),'Stable entry\n');
+ const layout=await resolveRuntimeLayout(path.join(portable,'runtime'));assert.equal(layout.mode,'portable');assert.equal(layout.skillRoot,portable);
+ assert.equal((await skillResourceIdentity(portable)).hash,initial.hash);
+ await fs.symlink('../SKILL.md',path.join(skill,'references/alias.md'));await assert.rejects(skillResourceIdentity(skill),/symlinks/);
+});
+test('behavior contract and full digest bind actor/cases/report and reject duplicates or unknown fields',()=>{
+ const body={schemaVersion:1,candidateSkillHash:h,suiteId:'suite',suiteHash:h,runnerHash:h,bindingHash:h,machineDigest:h,evaluator:'Synthetic observer',timestamp:'2026-10-08T00:00:00Z',confirmationSource:'coding-tool',cases:[{id:'one',mandatory:true,status:'passed',evidence:'Synthetic observed decision',artifactHashes:[h]}],reportHash:h};
+ const observed={...body,evidenceDigest:skillBehaviorDigest(body)};assert.equal(checkContract('SkillBehaviorObservation',observed).valid,true);
+ assert.equal(skillBehaviorDigest({...observed,evidenceDigest:'b'.repeat(64)}),observed.evidenceDigest);
+ assert.notEqual(skillBehaviorDigest({...observed,evaluator:'Different observer'}),observed.evidenceDigest);
+ assert.equal(checkContract('SkillBehaviorObservation',{...observed,extra:true}).valid,false);
+ assert.equal(checkContract('SkillBehaviorObservation',{...observed,cases:[...observed.cases,...observed.cases]}).valid,false);
+});

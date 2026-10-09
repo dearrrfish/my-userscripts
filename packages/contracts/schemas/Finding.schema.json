@@ -1,0 +1,152 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "type": "number"
+    },
+    "ruleId": {
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+      "type": "string"
+    },
+    "location": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "line": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "column": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "endLine": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "endColumn": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "line",
+        "column"
+      ]
+    },
+    "category": {
+      "anyOf": [
+        {
+          "const": "metadata",
+          "type": "string"
+        },
+        {
+          "const": "api",
+          "type": "string"
+        },
+        {
+          "const": "context",
+          "type": "string"
+        },
+        {
+          "const": "lint",
+          "type": "string"
+        }
+      ]
+    },
+    "severity": {
+      "anyOf": [
+        {
+          "const": "info",
+          "type": "string"
+        },
+        {
+          "const": "warning",
+          "type": "string"
+        },
+        {
+          "const": "error",
+          "type": "string"
+        }
+      ]
+    },
+    "fixability": {
+      "anyOf": [
+        {
+          "const": "automatic",
+          "type": "string"
+        },
+        {
+          "const": "manual",
+          "type": "string"
+        },
+        {
+          "const": "none",
+          "type": "string"
+        }
+      ]
+    },
+    "reasoning": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "kind": {
+            "anyOf": [
+              {
+                "const": "official",
+                "type": "string"
+              },
+              {
+                "const": "acceptance",
+                "type": "string"
+              },
+              {
+                "const": "fixture",
+                "type": "string"
+              }
+            ]
+          },
+          "reference": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "hash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "description": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "reference",
+          "hash",
+          "description"
+        ]
+      }
+    },
+    "needsConfirmation": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "category",
+    "severity",
+    "fixability",
+    "reasoning",
+    "evidence",
+    "needsConfirmation"
+  ]
+}

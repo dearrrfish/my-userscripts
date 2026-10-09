@@ -1,0 +1,141 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "type": "number"
+    },
+    "snapshots": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "const": 1,
+            "type": "number"
+          },
+          "scriptId": {
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "type": "string"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "local",
+                    "type": "string"
+                  },
+                  "path": {
+                    "minLength": 1,
+                    "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "path"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "url",
+                    "type": "string"
+                  },
+                  "url": {
+                    "format": "uri",
+                    "pattern": "^https?://",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "url"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "git",
+                    "type": "string"
+                  },
+                  "url": {
+                    "format": "uri",
+                    "pattern": "^https?://",
+                    "type": "string"
+                  },
+                  "ref": {
+                    "pattern": "^[a-f0-9]{40}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "url",
+                  "ref"
+                ]
+              }
+            ]
+          },
+          "retrievedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "revision": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "hash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "properties": {
+                "url": {
+                  "format": "uri",
+                  "pattern": "^https?://",
+                  "type": "string"
+                },
+                "hash": {
+                  "pattern": "^[a-f0-9]{64}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "url",
+                "hash"
+              ]
+            }
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "scriptId",
+          "origin",
+          "retrievedAt",
+          "hash",
+          "dependencies"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "snapshots"
+  ]
+}

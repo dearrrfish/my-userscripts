@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "metadata.match.http-star-scheme",
+  "revision": 1,
+  "scope": "shared",
+  "targetRange": {
+    "profileIds": [
+      "firemonkey-3.9-firefox-157.0"
+    ],
+    "fm": "=3.9",
+    "firefox": "=157.0"
+  },
+  "category": "metadata",
+  "severity": "error",
+  "matcher": {
+    "kind": "metadata",
+    "query": "match.http-star-scheme"
+  },
+  "preconditions": [],
+  "action": {
+    "kind": "diagnose"
+  },
+  "postconditions": [],
+  "dependencies": [],
+  "conflicts": [],
+  "evidence": [
+    {
+      "kind": "official",
+      "reference": "https://raw.githubusercontent.com/erosman/firemonkey/8da260defe9857d4c8461f8fb78a18ee22f9e62f/src/content/help.html",
+      "hash": "5ffba287528ea94536aee28b8a525fcb8837356742bf90d86a8d99db6ae0ea54",
+      "description": "Match pattern scheme http* is invalid: a scheme wildcard must be the only character."
+    }
+  ]
+}

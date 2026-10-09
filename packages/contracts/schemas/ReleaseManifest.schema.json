@@ -1,0 +1,256 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "type": "number"
+    },
+    "scriptId": {
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+      "type": "string"
+    },
+    "identity": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "namespace"
+      ]
+    },
+    "inputHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "outputHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "profileHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "rulesHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "verifiedReceipt": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1,
+          "type": "number"
+        },
+        "runId": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+          "type": "string"
+        },
+        "outputHash": {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        },
+        "dependencyHashes": {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            }
+          }
+        },
+        "targetHash": {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        },
+        "rulesHash": {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        },
+        "skillHash": {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        },
+        "toolVersion": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "checklistId": {
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+          "type": "string"
+        },
+        "checklistHash": {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        },
+        "verifier": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "confirmationSource": {
+          "anyOf": [
+            {
+              "const": "coding-tool",
+              "type": "string"
+            },
+            {
+              "const": "cli",
+              "type": "string"
+            }
+          ]
+        },
+        "perStepResults": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "id": {
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+                "type": "string"
+              },
+              "mandatory": {
+                "type": "boolean"
+              },
+              "status": {
+                "anyOf": [
+                  {
+                    "const": "passed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "failed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "pending",
+                    "type": "string"
+                  },
+                  {
+                    "const": "not-applicable",
+                    "type": "string"
+                  }
+                ]
+              },
+              "evidence": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "mandatory",
+              "status",
+              "evidence"
+            ]
+          }
+        },
+        "evidenceDigest": {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "runId",
+        "outputHash",
+        "dependencyHashes",
+        "targetHash",
+        "rulesHash",
+        "skillHash",
+        "toolVersion",
+        "checklistId",
+        "checklistHash",
+        "verifier",
+        "timestamp",
+        "confirmationSource",
+        "perStepResults",
+        "evidenceDigest"
+      ]
+    },
+    "version": {
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "type": "string"
+    },
+    "licenseEvidence": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "kind": {
+          "anyOf": [
+            {
+              "const": "official",
+              "type": "string"
+            },
+            {
+              "const": "acceptance",
+              "type": "string"
+            },
+            {
+              "const": "fixture",
+              "type": "string"
+            }
+          ]
+        },
+        "reference": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "hash": {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "reference",
+        "hash",
+        "description"
+      ]
+    },
+    "downloadUrl": {
+      "format": "uri",
+      "pattern": "^https?://",
+      "type": "string"
+    },
+    "updateUrl": {
+      "format": "uri",
+      "pattern": "^https?://",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "scriptId",
+    "identity",
+    "inputHash",
+    "outputHash",
+    "profileHash",
+    "rulesHash",
+    "verifiedReceipt",
+    "version",
+    "licenseEvidence",
+    "downloadUrl",
+    "updateUrl"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "snapshots": [
+    {
+      "schemaVersion": 1,
+      "scriptId": "greasyfork-454120",
+      "origin": {
+        "kind": "url",
+        "url": "https://update.greasyfork.org/scripts/454120/script.user.js"
+      },
+      "retrievedAt": "2026-10-04T20:31:21.105295Z",
+      "revision": "98",
+      "hash": "d9a695411c681a12c494de131b580f22c2943f237689a8aea5fe8a07b97b62fb",
+      "dependencies": []
+    }
+  ]
+}

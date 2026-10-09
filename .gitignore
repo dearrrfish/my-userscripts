@@ -13,3 +13,14 @@
 /.agent-team/templates/prompts/coordinate.md
 /.agent-team/templates/prompts/review.md
 /.agent-team/templates/prompts/discovery.md
+
+# Local conversion runs: raw logs, source caches, and proposal drafts.
+/.fm/
+/artifacts/
+
+# Workspace dependencies and generated bundles/build caches.
+node_modules/
+dist/
+build/
+.cache/
+*.tsbuildinfo

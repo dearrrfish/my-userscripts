@@ -1,0 +1,16 @@
+{
+  "cases": [
+    {
+      "file": "http-star-positive.user.js",
+      "query": "match.http-star-scheme",
+      "expected": true
+    },
+    {
+      "file": "http-star-negative.user.js",
+      "query": "match.http-star-scheme",
+      "expected": false
+    }
+  ],
+  "status": "matcher-verified",
+  "note": "Static positive/negative matching and repeated diagnosis stability verified with @fm/converter.inspect; browser acceptance and evidence-gated storage postconditions remain pending."
+}

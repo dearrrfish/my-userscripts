@@ -1,0 +1,13 @@
+import { readFile } from 'node:fs/promises';
+import assert from 'node:assert/strict';
+import { validateContract } from '../packages/contracts/dist/index.js';
+import { lintConfig, staticVerify } from '../packages/converter/dist/index.js';
+const profile=validateContract('TargetProfile',JSON.parse(await readFile(new URL('../profiles/firemonkey-3.9-firefox-157.0.json',import.meta.url),'utf8')));
+const input='// ==UserScript==\n// @name Profile test\n// @namespace test\n// @match https://example.org/*\n// @grant GM.getValue\n// ==/UserScript==\nGM.getValue("key").then(console.log);\n';
+const before=JSON.stringify(profile);
+assert.ok(lintConfig(input,profile).rules['no-restricted-properties'][1].allowProperties.includes('getValue'));
+const result=await staticVerify({source:input,profile});
+assert.equal(result.passed,true,JSON.stringify(result.findings));
+assert.equal(JSON.stringify(profile),before);
+assert.equal(result.verification.find(v=>v.kind==='browser').status,'pending');
+console.log('Pinned profile schema, per-run grants, exact lint and isolation passed; browser pending.');
