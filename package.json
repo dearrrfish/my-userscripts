@@ -14,6 +14,8 @@
     "fm": "node packages/cli/src/main.mjs",
     "test:release": "node scripts/test-release.mjs",
     "bundle": "node scripts/bundle.mjs",
-    "test:portable": "node scripts/test-portable.mjs"
+    "test:portable": "node scripts/test-portable.mjs",
+    "updates": "node scripts/scheduled-updates.mjs",
+    "test:updates": "node --test scripts/test-scheduled-updates.mjs scripts/test-ci-updates.mjs"
   }
 }

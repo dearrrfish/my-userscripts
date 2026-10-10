@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "reviewRoot": "updates/candidates",
+  "projectIds": ["greasyfork-454120"],
+  "provider": {"mode": "off", "timeoutMs": 20000, "maxRequestBytes": 24000, "maxResponseBytes": 16000}
+}

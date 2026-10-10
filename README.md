@@ -54,7 +54,9 @@ The seven previous scripts and styles live unchanged under `legacy-static/`.
 They are only moved and are excluded from conversion and compatibility work.
 See [migration](docs/migration.md).
 
-Scheduled GitHub Actions updates and LLM provider integration are deferred.
+[Scheduled updates](docs/scheduled-updates.md) can synchronize sources and open
+review PRs with optional bounded free-model or custom OpenAI-compatible drafts.
+Scheduling and model requests are opt-in; browser/fixture gates remain pending.
 
 Build a new self-contained skill folder after the workspace build:
 

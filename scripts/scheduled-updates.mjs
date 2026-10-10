@@ -1,0 +1,48 @@
+#!/usr/bin/env node
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {runCli} from '../packages/cli/dist/index.js';
+import {convert,staticVerify} from '../packages/converter/dist/index.js';
+import {validateContract,validateRuleSet} from '../packages/contracts/dist/index.js';
+import {loadUpdatesConfig} from './lib/updates/config.mjs';
+import {hash,json,read,write,safe} from './lib/updates/guards.mjs';
+import {ownedSummary,restoreTransfer,packageTransfer,validateReport} from './lib/updates/artifacts.mjs';
+import {requestEdits} from './lib/updates/provider.mjs';
+import {contextWindows,applyEdits} from './lib/updates/edits.mjs';
+export const updateFingerprint=bindings=>hash(json(bindings));
+const toolRoot=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+async function filesAt(root,relative) { const files=[]; async function visit(name) { const file=await safe(root,name); const st=await fs.lstat(file); if(st.isDirectory()) { for(const child of (await fs.readdir(file)).sort()) { await visit(name+'/'+child); } } else if(st.isFile()) { files.push(name); } else { throw new Error('tool-file'); } } await visit(relative); return files; }
+export async function scheduledUpdates({workspace=process.cwd(),repositoryConfig,updatesConfig,previousState,transferOut,fetchImpl,key}={}) {
+  workspace=await fs.realpath(workspace); const config=await loadUpdatesConfig(workspace,updatesConfig); const repositoryBytes=await read(workspace,repositoryConfig); const repo=validateContract('RepositoryConfig',JSON.parse(repositoryBytes));
+  if(config.provider.mode!=='off'&&!(key??process.env.FM_MODEL_API_KEY)) { throw new Error('missing-key'); }
+  const projects=config.projectIds.map(v=>{const p=repo.projects.find(p=>p.id===v);if(!p){throw new Error('unknown-project');}return p;}); const scripts=projects.flatMap(p=>p.scripts); const ids=scripts.map(s=>s.id);
+  if(previousState) { const previousRoot=await safe(workspace,previousState); let available=false; try { const st=await fs.lstat(previousRoot); if(!st.isDirectory()) { throw new Error('previous-state'); } available=true; } catch(error) { if(error.code!=='ENOENT') { throw error; } } if(available) { await restoreTransfer({workspace,previousState:previousRoot,reviewRoot:config.reviewRoot,expectedScriptIds:ids}); } }
+
+  const prior=await ownedSummary(workspace,config.reviewRoot,ids); const entries=[...prior.entries];
+  const profileText=await read(toolRoot,`profiles/${repo.targetProfile}.json`); const profile=validateContract('TargetProfile',JSON.parse(profileText)); const ruleFiles=await filesAt(toolRoot,'rules'); const rules=validateRuleSet(await Promise.all(ruleFiles.filter(f=>f.endsWith('.json')).map(async f=>JSON.parse(await read(toolRoot,f)))));
+  const toolFiles=[...await filesAt(toolRoot,'skills/fm-convert'),...await filesAt(toolRoot,'scripts/lib/updates'), 'scripts/scheduled-updates.mjs','pnpm-lock.yaml']; for(const p of ['cli','converter','contracts','evolution']) { toolFiles.push(...await filesAt(toolRoot,`packages/${p}/dist`)); }
+  const tools={}; for(const f of toolFiles.sort()) { tools[f]=hash(await read(toolRoot,f)); }
+  for(const project of projects) { const synced=await runCli(['sync','--config',repositoryConfig,'--project',project.id],{cwd:workspace}); if(synced.code!==0) { throw new Error('sync-failed'); } }
+  const lock=validateContract('SourceLock',JSON.parse(await read(workspace,'source.lock.json'))); let changed=0; const statuses=[];
+  for(const script of scripts) {
+    const snapshot=lock.snapshots.find(s=>s.scriptId===script.id); if(!snapshot){throw new Error('snapshot');} const source=new TextDecoder('utf-8',{fatal:true}).decode(await read(workspace,`.fm/sources/${snapshot.hash}.user.js`)); if(hash(source)!==snapshot.hash){throw new Error('source-hash');}
+    const fingerprint=updateFingerprint({source:snapshot.hash,dependencies:snapshot.dependencies,origin:snapshot.origin,config:hash(repositoryBytes),updates:config,profile:hash(profileText),rules,tools}); const old=entries.find(e=>e.scriptId===script.id); if(old?.fingerprint===fingerprint) { const priorReport=JSON.parse(await read(workspace,old.reportPath)); const lockHash=hash(await read(workspace,'source.lock.json')); if(priorReport.provenance.sourceLockHash!==lockHash) { priorReport.provenance.sourceLockHash=lockHash; validateReport(priorReport); await write(workspace,old.reportPath,json(priorReport)); old.reportHash=hash(json(priorReport)); changed++; } statuses.push({scriptId:script.id,status:'unchanged'}); continue; }
+    const output=path.posix.join(repo.outputRoot,script.outputPath); const baseline=await runCli(['convert','--config',repositoryConfig,'--script-id',script.id,'--input',projects.find(p=>p.scripts.includes(script)).upstream.kind==='local'?path.posix.join(projects.find(p=>p.scripts.includes(script)).upstream.path,script.sourcePath):`.fm/sources/${snapshot.hash}.user.js`,'--output',output,'--target',repo.targetProfile,'--dry-run'],{cwd:workspace});
+    if(!baseline.json){throw new Error('baseline-failed');} const manifest=JSON.parse(await fs.readFile(baseline.json,'utf8')); if(manifest.result?.inputHash!==snapshot.hash){throw new Error('baseline-provenance');}
+    const selected=script.ruleIds?rules.filter(r=>r.scope==='shared'||script.ruleIds.includes(r.id)):rules; const original=convert({source,profile,rules:selected,scriptId:script.id}); let candidate=original.source; let providerStatus='off';
+    if(config.provider.mode!=='off') { const windows=contextWindows(candidate,manifest.result.findings,Math.floor(config.provider.maxRequestBytes*.65)); const response=windows?await requestEdits(config.provider,{windows,diagnostics:manifest.result.findings.filter(f=>f.location).slice(0,16).map(f=>({category:f.category,severity:f.severity,line:f.location.line})),profileId:profile.id},{fetchImpl,key}):{status:key??process.env.FM_MODEL_API_KEY?'context-budget':'missing-key'}; providerStatus=response.status;
+      if(response.status==='edits') { try { candidate=applyEdits(candidate,response.edits,windows); } catch { providerStatus='unsafe-edit'; } }
+      if(!['edits'].includes(providerStatus)&&old) { throw new Error('provider-update-failed'); }
+    }
+    const analysis=convert({source:candidate,profile,rules:selected,scriptId:script.id}); const checked=await staticVerify({source:candidate,profile}); const obligations=original.guidance.map(r=>r.id); const unresolvedOriginal=original.findings.filter(f=>f.severity==='error'&&f.category!=='lint'); const findings=[...analysis.findings,...checked.findings];
+    const state=obligations.length||unresolvedOriginal.length||findings.some(f=>f.severity==='error')||!checked.passed?'blocked':'pending-browser'; const candidatePath=`${config.reviewRoot}/${script.id}/candidate.user.js`, reportPath=`${config.reviewRoot}/${script.id}/report.json`;
+    for(const name of [candidatePath,reportPath]) { try { await read(workspace,name); if(!old){throw new Error('unowned-output');} } catch(error){if(error.code!=='ENOENT'){throw error;}} }
+    const report=validateReport({schemaVersion:1,scriptId:script.id,fingerprint,inputHash:snapshot.hash,outputHash:hash(candidate),baselineState:manifest.result.state,candidateState:state,providerStatus,errors:findings.filter(f=>f.severity==='error').length,warnings:findings.filter(f=>f.severity==='warning').length,unresolvedRuleIds:obligations,browser:'pending',fixture:'pending',eligible:false,identity:script.identity,profileId:profile.id,originalManualErrors:unresolvedOriginal.length,provenance:{sourceHash:snapshot.hash,sourceLockHash:hash(await read(workspace,'source.lock.json')),dependencyHashes:snapshot.dependencies.map(d=>d.hash),repositoryConfigHash:hash(repositoryBytes),updatesConfigHash:hash(json(config)),profileHash:hash(profileText),rulesHash:hash(json(rules)),skillHash:hash(json(Object.fromEntries(Object.entries(tools).filter(([p])=>p.startsWith('skills/'))))),toolHash:hash(json(tools)),providerHash:hash(json(config.provider))}});
+    await write(workspace,candidatePath,candidate); await write(workspace,reportPath,json(report)); const entry={scriptId:script.id,fingerprint,candidatePath,reportPath,candidateHash:hash(candidate),reportHash:hash(json(report))}; const index=entries.findIndex(e=>e.scriptId===script.id); if(index<0){entries.push(entry);}else{entries[index]=entry;} changed++; statuses.push({scriptId:script.id,status:state});
+  }
+  entries.sort((a,b)=>a.scriptId<b.scriptId?-1:a.scriptId>b.scriptId?1:0); await write(workspace,`${config.reviewRoot}/summary.json`,json({schemaVersion:1,reviewRoot:config.reviewRoot,entries}));
+  if(transferOut){await packageTransfer({workspace,reviewRoot:config.reviewRoot,outputDir:await safe(workspace,transferOut),expectedScriptIds:ids});} return {code:0,changed,statuses};
+}
+export function parseArguments(args) { const options={}; const names={'--repository-config':'repositoryConfig','--updates-config':'updatesConfig','--previous-state':'previousState','--transfer-out':'transferOut'}; for(let i=0;i<args.length;i+=2){if(!names[args[i]]||!args[i+1]||args[i+1].startsWith('--')||options[names[args[i]]]){throw new Error('arguments');}options[names[args[i]]]=args[i+1];} if(!options.repositoryConfig||!options.updatesConfig){throw new Error('arguments');}return options; }
+if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){try{const result=await scheduledUpdates(parseArguments(process.argv.slice(2)));process.stdout.write(json(result));}catch{process.stdout.write(json({code:1,status:'scheduled-update-failed'}));process.exitCode=1;}}
