@@ -98,3 +98,61 @@ test('network match host validation rejects empty hosts and ports, retains file 
   const s=source().replace('https://example.org/*',pattern);assert.equal(run(s).status,'unchanged');assert.equal((await staticVerify({source:s,profile})).passed,true);
  }
 });
+
+test('API detection follows lexical scopes while ambient and aliased APIs remain guarded',()=>{
+ const local=[
+  '(() => { var GM_fetch; GM_fetch = () => 1; GM_fetch(); })();',
+  'function use(GM_fetch, GM, unsafeWindow) { GM_fetch(); GM[key](); return unsafeWindow; }',
+  '{ const {fetch: GM_fetch} = {}; GM_fetch(); }',
+  'try {} catch (GM_fetch) { console.log(GM_fetch); }',
+  'const GM_fetch = () => 1; console.log({GM_fetch});',
+  'const GM = {}; GM.unknown(); const alias = GM; console.log(alias);'
+ ];
+ for(const body of local){assert.equal(run(source(body)).status,'unchanged',body);}
+ for(const body of [
+  '{ const GM_fetch = () => 1; GM_fetch(); } GM_fetch();',
+  'function local(GM_fetch) { GM_fetch(); } GM_fetch();',
+  'console.log({GM_fetch});',
+  'GM_fetch();', 'GM[key]();', 'const alias = GM;',
+  'function local(GM) { GM.unknown(); } GM.unknown();'
+ ]){assert.equal(run(source(body)).status,'blocked',body);}
+ assert.equal(run(source('','// @grant GM_fetch\n')).status,'blocked');
+});
+test('userscript lint accepts top-level return and retains lint enforcement',async()=>{
+ const before=JSON.stringify(profile);
+ const result=await staticVerify({source:source('if (window.top !== window.self) { return; } console.log("top frame");'),profile});
+ assert.equal(result.verification.find(v=>v.kind==='lint').status,'passed');
+ assert.equal(result.passed,true);assert.equal(JSON.stringify(profile),before);
+ const invalid=await staticVerify({source:source('if (true) return;'),profile});
+ assert.equal(invalid.verification.find(v=>v.kind==='lint').status,'failed');
+});
+
+test('typeof GM existence guards are not aliases while computed access stays guarded',()=>{
+ const guarded=source('if (typeof GM !== "undefined") { GM.getValue("x").then(console.log); }','// @grant GM.getValue\n');
+ assert.equal(run(guarded).status,'unchanged');
+ for(const body of ['const alias = GM;', 'console.log(typeof GM[key]);']){
+  const result=run(source(body));assert.equal(result.status,'blocked');
+  assert.ok(result.findings.some(f=>f.reasoning.startsWith('Dynamic or aliased GM')));
+ }
+});
+
+test('exact require sources provide declarations without trusting ambient unknown APIs',async()=>{
+ const url='https://example.org/config.js';
+ const dependency={url,source:'var GM_config = {}; function pvcep_rules() {} const pvcep_lang = {};'};
+ dependency.hash=hash(dependency.source);
+ const s=source('console.log(GM_config, pvcep_rules, pvcep_lang);',`// @require ${url}\n`);
+ assert.equal(inspect({source:s,profile,dependencies:[dependency]}).status,'unchanged');
+ assert.equal((await staticVerify({source:s,profile,dependencies:[dependency]})).passed,true);
+ for(const body of ['console.log(GM_unknown);', 'console.log(hidden);']){
+  const bad=source(body,`// @require ${url}\n`);
+  assert.equal((await staticVerify({source:bad,profile,dependencies:[dependency]})).passed,false);
+ }
+ assert.equal(inspect({source:s,profile,dependencies:[{...dependency,hash:hash('changed')}]}).status,'blocked');
+ assert.equal(inspect({source:s.replace('@require','@resource config'),profile,dependencies:[dependency]}).status,'blocked');
+ const unsafe={url,source:'var GM_config = {}; GM_unknown();'};unsafe.hash=hash(unsafe.source);
+ assert.equal(inspect({source:s,profile,dependencies:[unsafe]}).status,'blocked');
+ const nested={url,source:'(() => { var GM_config = {}; })();'};nested.hash=hash(nested.source);
+ assert.equal(inspect({source:s,profile,dependencies:[nested]}).status,'blocked');
+ const grant=source('console.log(GM_config);',`// @require ${url}\n// @grant GM_config\n`);
+ assert.equal(inspect({source:grant,profile,dependencies:[dependency]}).status,'blocked');
+});

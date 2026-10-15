@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {createPicviewerSettingsPanel,openPicviewerSettingsPanel} from './settings-panel.mjs';
+let created=0;
+const document={documentElement:{appendChild(panel){panel.isConnected=true;panel.parentNode=this;return panel;}},createElement(tag){created++;assert.equal(tag,'div');return {tagName:'DIV',id:'',style:{},isConnected:false,nodes:[],querySelectorAll(selector){assert.equal(selector,'[id]');return this.nodes;}};}};
+const panel=createPicviewerSettingsPanel(document);
+assert.equal(panel.getElementById('missing'),null);
+panel.nodes=[{id:'pv-prefs_section_0'},{id:'pv-prefs_field_gallery.searchData'}];
+assert.equal(panel.getElementById('pv-prefs_field_gallery.searchData'),panel.nodes[1]);
+assert.equal(panel.getElementById('pv-prefs_section_0'),panel.nodes[0]);
+panel.id='pv-prefs';assert.equal(panel.getElementById('pv-prefs'),panel);
+Object.defineProperty(panel,'contentDocument',{get(){throw new Error('Iframe document must never be accessed');}});
+let builds=0,centers=0;
+const config={frame:panel,frameStyle:{width:'480px',zIndex:'2147483647'},open(){assert.ok(panel.isConnected);if(!this.isOpen){builds++;this.isOpen=true;panel.nodes=[{id:'pv-prefs_saveBtn'}];}panel.style.display='block';},center(){centers++;}};
+assert.equal(openPicviewerSettingsPanel(config,document),panel);
+assert.equal(panel.style.width,'480px');assert.equal(panel.style.transform,'translateZ(0)');assert.equal(panel.style.boxSizing,'border-box');assert.equal(builds,1);
+openPicviewerSettingsPanel(config,document);assert.equal(builds,1);
+// Mimic the supported custom-element close path, then open the same root again.
+config.isOpen=false;panel.nodes=[];panel.style.display='none';
+openPicviewerSettingsPanel(config,document);assert.equal(builds,2);assert.equal(created,1);assert.equal(centers,3);assert.equal(panel.style.display,'block');
+assert.throws(()=>openPicviewerSettingsPanel({frame:{tagName:'IFRAME'}},document),TypeError);
+const source=fs.readFileSync('.fm/adaptations/picviewer-ce/candidate.user.js','utf8');
+assert.ok(source.includes(createPicviewerSettingsPanel.toString()));assert.ok(source.includes(openPicviewerSettingsPanel.toString()));
+assert.ok(source.includes('frame: createPicviewerSettingsPanel(document)'));
+assert.ok(source.includes("const keyInputs = GM_config.frame.querySelectorAll('input.floatBar-key')"));
+assert.ok(!source.includes('GM_config.frame.contentDocument'));
+assert.ok(!source.includes('_GM_openInTab("https://pv.hoothin.com/open-settings"'));
+console.log('PASS: same-document settings lifecycle, scoped tab/field lookup (including dotted IDs), duplicate open, close/reopen, styling and no iframe-document reads. Supplied script not executed.');

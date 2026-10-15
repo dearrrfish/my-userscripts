@@ -459,6 +459,156 @@
             "description": "No support established by inspected API mapping; do not synthesize a shim."
           }
         ]
+      },
+      {
+        "name": "GM_xmlhttpRequest",
+        "status": "supported",
+        "contexts": [
+          "user-script"
+        ],
+        "evidence": [
+          {
+            "kind": "official",
+            "reference": "https://raw.githubusercontent.com/erosman/firemonkey/8da260defe9857d4c8461f8fb78a18ee22f9e62f/src/content/api-gm.js",
+            "hash": "b9a73579ced143768db7693ef3bdff5aea8c2d490ca8eca263396104bd7d008d",
+            "description": "Grant-gated legacy callback API (lines 109-130, 654-663); preserve callback semantics, distinct from modern Promise API."
+          }
+        ]
+      },
+      {
+        "name": "GM.xmlHttpRequest",
+        "status": "supported",
+        "contexts": [
+          "user-script"
+        ],
+        "evidence": [
+          {
+            "kind": "official",
+            "reference": "https://raw.githubusercontent.com/erosman/firemonkey/8da260defe9857d4c8461f8fb78a18ee22f9e62f/src/content/api-gm.js",
+            "hash": "b9a73579ced143768db7693ef3bdff5aea8c2d490ca8eca263396104bd7d008d",
+            "description": "Grant-gated modern Promise API (lines 109-130, 626-652); preserve Promise semantics, distinct from legacy callbacks."
+          }
+        ]
+      },
+      {
+        "name": "GM_addStyle",
+        "status": "supported",
+        "contexts": [
+          "user-script"
+        ],
+        "evidence": [
+          {
+            "kind": "official",
+            "reference": "https://raw.githubusercontent.com/erosman/firemonkey/8da260defe9857d4c8461f8fb78a18ee22f9e62f/src/content/api-gm.js",
+            "hash": "b9a73579ced143768db7693ef3bdff5aea8c2d490ca8eca263396104bd7d008d",
+            "description": "Grant-gated style insertion APIs (lines85-107, 329-331). addStyle calls addElement without returning its result: return value is undefined, not HTMLStyleElement. Consumers needing a stylesheet node must create and return one explicitly."
+          }
+        ]
+      },
+      {
+        "name": "GM.addStyle",
+        "status": "supported",
+        "contexts": [
+          "user-script"
+        ],
+        "evidence": [
+          {
+            "kind": "official",
+            "reference": "https://raw.githubusercontent.com/erosman/firemonkey/8da260defe9857d4c8461f8fb78a18ee22f9e62f/src/content/api-gm.js",
+            "hash": "b9a73579ced143768db7693ef3bdff5aea8c2d490ca8eca263396104bd7d008d",
+            "description": "Grant-gated style insertion APIs (lines85-107, 329-331). addStyle calls addElement without returning its result: return value is undefined, not HTMLStyleElement. Consumers needing a stylesheet node must create and return one explicitly."
+          }
+        ]
+      },
+      {
+        "name": "GM_setClipboard",
+        "status": "supported",
+        "contexts": [
+          "user-script"
+        ],
+        "evidence": [
+          {
+            "kind": "official",
+            "reference": "https://raw.githubusercontent.com/erosman/firemonkey/8da260defe9857d4c8461f8fb78a18ee22f9e62f/src/content/api-gm.js",
+            "hash": "b9a73579ced143768db7693ef3bdff5aea8c2d490ca8eca263396104bd7d008d",
+            "description": "Grant-gated clipboard APIs (lines 85-107, 570-588); require a secure context, unavailable to HTTP page content scripts."
+          }
+        ]
+      },
+      {
+        "name": "GM.setClipboard",
+        "status": "supported",
+        "contexts": [
+          "user-script"
+        ],
+        "evidence": [
+          {
+            "kind": "official",
+            "reference": "https://raw.githubusercontent.com/erosman/firemonkey/8da260defe9857d4c8461f8fb78a18ee22f9e62f/src/content/api-gm.js",
+            "hash": "b9a73579ced143768db7693ef3bdff5aea8c2d490ca8eca263396104bd7d008d",
+            "description": "Grant-gated clipboard APIs (lines 85-107, 570-588); require a secure context, unavailable to HTTP page content scripts."
+          }
+        ]
+      },
+      {
+        "name": "GM_download",
+        "status": "supported",
+        "contexts": [
+          "user-script"
+        ],
+        "evidence": [
+          {
+            "kind": "official",
+            "reference": "https://raw.githubusercontent.com/erosman/firemonkey/8da260defe9857d4c8461f8fb78a18ee22f9e62f/src/content/api-gm.js",
+            "hash": "b9a73579ced143768db7693ef3bdff5aea8c2d490ca8eca263396104bd7d008d",
+            "description": "Grant-gated download(url, filename) APIs (lines85-107, 528-537); unlike Tampermonkey, this implementation does not accept a details object, headers or callback options."
+          }
+        ]
+      },
+      {
+        "name": "GM.download",
+        "status": "supported",
+        "contexts": [
+          "user-script"
+        ],
+        "evidence": [
+          {
+            "kind": "official",
+            "reference": "https://raw.githubusercontent.com/erosman/firemonkey/8da260defe9857d4c8461f8fb78a18ee22f9e62f/src/content/api-gm.js",
+            "hash": "b9a73579ced143768db7693ef3bdff5aea8c2d490ca8eca263396104bd7d008d",
+            "description": "Grant-gated download(url, filename) APIs (lines85-107, 528-537); unlike Tampermonkey, this implementation does not accept a details object, headers or callback options."
+          }
+        ]
+      },
+      {
+        "name": "GM_log",
+        "status": "supported",
+        "contexts": [
+          "user-script"
+        ],
+        "evidence": [
+          {
+            "kind": "official",
+            "reference": "https://raw.githubusercontent.com/erosman/firemonkey/8da260defe9857d4c8461f8fb78a18ee22f9e62f/src/content/api-gm.js",
+            "hash": "b9a73579ced143768db7693ef3bdff5aea8c2d490ca8eca263396104bd7d008d",
+            "description": "Grant-gated logging API mapped at lines85-107 and160; implementation static log=console.log at line769. Required by the legacy GM_config logging fallback."
+          }
+        ]
+      },
+      {
+        "name": "GM.log",
+        "status": "supported",
+        "contexts": [
+          "user-script"
+        ],
+        "evidence": [
+          {
+            "kind": "official",
+            "reference": "https://raw.githubusercontent.com/erosman/firemonkey/8da260defe9857d4c8461f8fb78a18ee22f9e62f/src/content/api-gm.js",
+            "hash": "b9a73579ced143768db7693ef3bdff5aea8c2d490ca8eca263396104bd7d008d",
+            "description": "Grant-gated logging API mapped at lines85-107 and160; implementation static log=console.log at line769. Required by the legacy GM_config logging fallback."
+          }
+        ]
       }
     ],
     "metadata": [

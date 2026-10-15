@@ -163,6 +163,17 @@ async function captureDependencies(root: string, source: string): Promise<{url:s
   }
   return dependencies;
 }
+async function dependencySources(root:string,source:string,dependencies:{url:string;hash:string}[]) {
+  const result:{url:string;hash:string;source:string}[]=[];
+  for(const entry of parseMetadata(source).entries.filter(e=>e.key==='require')){
+    const url=safeUrl(entry.value.trim()); const dependency=dependencies.find(d=>d.url===url);
+    if(!dependency||!/^[a-f0-9]{64}$/.test(dependency.hash)){throw new CliError('Missing captured @require dependency',2);}
+    const bytes=await fs.readFile(await guard(root,`.fm/dependencies/${dependency.hash}`));
+    if(hash(bytes)!==dependency.hash){throw new CliError('Dependency snapshot changed; create a new run',2);}
+    result.push({...dependency,source:decode(bytes)});
+  }
+  return result;
+}
 async function sync(opts: any,cwd: any) {
   const ctx = await configContext(required(opts,'config'),cwd);
   const project = ctx.config.projects.find(p => p.id === required(opts,'project'));
@@ -216,13 +227,14 @@ async function convertCommand(opts: any,cwd: any) {
     const dependencyHashes = {...defaultsData.toolHashes};
     for (const dependency of dependencies) { dependencyHashes[dependency.url] = dependency.hash; }
     if (sourceLockHash) { const lock = validateContract('SourceLock',await load(await guard(ctx.root,'source.lock.json'))); const snapshot = lock.snapshots.find(s => s.scriptId === scriptId); if (!snapshot || json(snapshot.dependencies) !== json(dependencies)) { throw new CliError('Dependency bytes differ from synchronized source lock; resync and create a new run',2); } }
+    const requiredSources = await dependencySources(ctx.root,source,dependencies);
     const identity = binding(source,script?.identity);
     const rules = script?.ruleIds ? defaultsData.rules.filter(r => r.scope === 'shared' || script.ruleIds.includes(r.id)) : defaultsData.rules;
     const transforms = opts.transform ? opts.transform.split(',') : [];
     if (transforms.some((id: string) => !builtinTransformIds.includes(id as typeof builtinTransformIds[number]))) { throw new CliError('Unsupported transform selection',2); }
-    const converted = convert({ source,profile:defaultsData.profile,rules,scriptId,builtinTransforms:transforms });
+    const converted = convert({ source,profile:defaultsData.profile,rules,scriptId,builtinTransforms:transforms,dependencies:requiredSources });
     const outputHash = hash(converted.source);
-    const checked = await staticVerify({source:converted.source,profile:defaultsData.profile});
+    const checked = await staticVerify({source:converted.source,profile:defaultsData.profile,dependencies:requiredSources});
     const blocked = ['blocked','needs-manual-fix'].includes(converted.status);
     const result = validateContract('ConversionResult',{schemaVersion:1,runId:run.runId,state:blocked ? 'blocked' : checked.passed ? 'pending-browser' : 'failed',inputHash,outputHash,targetHash:defaultsData.targetHash,rulesHash:defaultsData.rulesHash,skillHash:defaultsData.skillHash,toolVersion:defaultsData.toolVersion,dependencyHashes,findings:redact([...converted.findings,...checked.findings]),appliedRules:converted.appliedRules,verification:checked.verification.map(v => v.kind === 'browser' ? {...v,command:undefined,checklist:script?.acceptance.checklistId ?? 'standalone-runtime'} : v)});
     const steps = checklist(scriptId); const checklistId = script?.acceptance.checklistId ?? 'standalone-runtime';
@@ -255,14 +267,15 @@ async function fresh(manifest: any,run: any) {
     if (recordedToolHashes[key] !== current.toolHashes[key] || Object.hasOwn(recordedToolHashes,key) !== Object.hasOwn(current.toolHashes,key)) { throw new CliError('Tool/dependency presence or content changed; create a new run',2); }
   }
   if (manifest.sourceLockHash && hash(await read(await guard(manifest.root,'source.lock.json'))) !== manifest.sourceLockHash) { throw new CliError('Source lock changed; create a new run',2); }
-  for (const dependency of manifest.dependencies ?? []) { if (hash(await fs.readFile(await guard(manifest.root,`.fm/dependencies/${dependency.hash}`))) !== dependency.hash) { throw new CliError('Dependency snapshot changed; create a new run',2); } }
+  for (const dependency of manifest.dependencies ?? []) { if (manifest.result.dependencyHashes[dependency.url] !== dependency.hash) { throw new CliError('Dependency manifest binding changed; create a new run',2); } if (hash(await fs.readFile(await guard(manifest.root,`.fm/dependencies/${dependency.hash}`))) !== dependency.hash) { throw new CliError('Dependency snapshot changed; create a new run',2); } }
   for (const k of ['targetHash','rulesHash','skillHash','toolVersion'] as const) { if (current[k] !== manifest.result[k]) { throw new CliError('Run bindings stale; create a new run',2); } }
   if (manifest.configPath && hash(await read(await guard(manifest.root,manifest.configPath))) !== manifest.configHash) { throw new CliError('Configuration changed; create a new run',2); }
   if (manifest.inputPath && hash(await read(await guard(manifest.root,manifest.inputPath))) !== manifest.result.inputHash) { throw new CliError('Source changed; create a new run',2); }
   const candidate = manifest.materialized ? manifest.outputPath : path.join(run.dir,'candidate.user.js');
   const source = await read(await guard(manifest.root,candidate));
   if (hash(source) !== manifest.result.outputHash || hash(await read(path.join(run.dir,'source.user.js'))) !== manifest.result.inputHash) { throw new CliError('Artifact changed; create a new run',2); }
-  return {source,current};
+  const dependencies=await dependencySources(manifest.root,source,manifest.dependencies??[]);
+  return {source,current,dependencies};
 }
 type FreshData = Awaited<ReturnType<typeof fresh>>;
 async function optionalRecord(root: string, file: string): Promise<unknown | undefined> {
@@ -295,7 +308,7 @@ async function refreshEvidence(manifest: any, run: {runId:string;dir:string}, da
   }
   const receiptValue = await optionalRecord(manifest.root,path.join(run.dir,'acceptance.json'));
   if (receiptValue) { context.receipt = assertReceipt(receiptValue,manifest); }
-  const checked = await staticVerify({source:data.source,profile:data.current.profile});
+  const checked = await staticVerify({source:data.source,profile:data.current.profile,dependencies:data.dependencies});
   const records = mergeFixtureVerification(checked.verification.filter(v => v.kind !== 'browser'),context);
   const browserPassed = context.receipt?.perStepResults.every(step => !step.mandatory || step.status === 'passed');
   const browserFailed = context.receipt?.perStepResults.some(step => step.mandatory && step.status === 'failed');

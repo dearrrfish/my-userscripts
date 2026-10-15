@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "outputRoot": "artifacts/converted",
+  "targetProfile": "firemonkey-3.9-firefox-157.0",
+  "projects": [
+    {
+      "id": "greasyfork-24204",
+      "upstream": {
+        "kind": "local",
+        "path": ".fm/adaptations/picviewer-ce"
+      },
+      "scripts": [
+        {
+          "id": "greasyfork-24204",
+          "sourceManager": "unknown",
+          "outputPath": "greasyfork-24204-settings-fix.user.js",
+          "identity": {
+            "name": "Picviewer CE+",
+            "namespace": "https://github.com/hoothin/UserScripts"
+          },
+          "acceptance": {
+            "checklistId": "greasyfork-24204-runtime"
+          },
+          "publish": {
+            "mode": "disabled"
+          },
+          "sourcePath": "candidate.user.js"
+        }
+      ]
+    }
+  ]
+}

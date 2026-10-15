@@ -83,3 +83,20 @@ test('modified tool binding invalidates verification and stubs never alter actua
  }finally{nodeFs.promises.readFile=original;syncBuiltinESMExports();}
  assert.deepEqual(await fs.readFile(file),actual);
 });
+
+test('captured require globals survive static reverify and changed cache is rejected',async()=>{
+ const dependency='var GM_config = {}; function pvcep_rules() {} const pvcep_lang = {};';
+ const server=http.createServer((req,res)=>res.end(dependency));await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const url=`http://127.0.0.1:${server.address().port}/config.js`;
+ try{
+  const dir=await workspace();
+  await fs.writeFile(path.join(dir,'input.user.js'),fixture.replace('// @grant none',`// @require ${url}\n// @grant none`)+ '\nconsole.log(GM_config, pvcep_rules, pvcep_lang);');
+  const result=await convert(dir);assert.equal(result.code,0,JSON.stringify(result));
+  const resourceDir=await workspace();
+  await fs.writeFile(path.join(resourceDir,'input.user.js'),fixture.replace('// @grant none',`// @resource config ${url}\n// @grant none`)+'\nconsole.log(GM_config);');
+  assert.equal((await convert(resourceDir)).code,2);
+  const verified=await runCli(['verify','--run',result.runId,'--static'],{cwd:dir});assert.equal(verified.code,3,JSON.stringify(verified));
+  await fs.writeFile(path.join(dir,'.fm/dependencies',hash(dependency)),'changed');
+  const changed=await runCli(['verify','--run',result.runId,'--static'],{cwd:dir});assert.equal(changed.code,2);assert.match(changed.error,/Dependency snapshot changed/);
+ }finally{await new Promise(resolve=>server.close(resolve));}
+});
