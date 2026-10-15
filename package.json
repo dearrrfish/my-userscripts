@@ -16,6 +16,8 @@
     "bundle": "node scripts/bundle.mjs",
     "test:portable": "node scripts/test-portable.mjs",
     "updates": "node scripts/scheduled-updates.mjs",
-    "test:updates": "node --test scripts/test-scheduled-updates.mjs scripts/test-ci-updates.mjs"
+    "test:updates": "node --test scripts/test-scheduled-updates.mjs scripts/test-ci-updates.mjs",
+    "publish-scripts": "node scripts/publish.mjs",
+    "test:publish": "node --test scripts/test-publish.mjs"
   }
 }

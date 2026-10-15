@@ -28,6 +28,17 @@
           "hash": "41f59413f148335cb442008aad4c619c909e4ec17edef88e94685f11fb70d440"
         }
       ]
+    },
+    {
+      "schemaVersion": 1,
+      "scriptId": "greasyfork-454120",
+      "origin": {
+        "kind": "url",
+        "url": "https://update.greasyfork.org/scripts/454120/script.user.js"
+      },
+      "retrievedAt": "2026-10-15T18:08:10.612Z",
+      "hash": "921966e614485a170dfb261e51bc2de6de159119835f7faa963d6e96707c5853",
+      "dependencies": []
     }
   ]
 }

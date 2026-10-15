@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "scriptId": "greasyfork-24204",
+  "name": "Picviewer CE+",
+  "namespace": "https://github.com/hoothin/UserScripts",
+  "version": "2026.9.29.1",
+  "candidateHash": "13cb48ebe60a0d35480cafaa1e8bd63abaf0bf7bda7e29ff96c99fd366168630",
+  "userJsHash": "352ebba7fd81dbd4e269bf8b0125a87335e77ea095de362160a5052c89256876",
+  "metaJsHash": "e22bd1a6fca3371daa9364553ef8b66b5dc088287fc65ccb691c5547cdf8cba3",
+  "downloadUrl": "https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-24204.user.js",
+  "updateUrl": "https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-24204.meta.js",
+  "upstreamUrl": "https://greasyfork.org/zh-CN/scripts/24204-picviewer-ce",
+  "publishedAt": "2026-10-15T18:11:03.322Z"
+}

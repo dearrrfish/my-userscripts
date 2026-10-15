@@ -1,11 +1,11 @@
 # FireMonkey userscript workspace
 
 A userscript conversion workspace with versioned contracts, pinned FireMonkey
-profiles, and shared or script-specific rules. The development target is
-[GreasyFork 454120](https://greasyfork.org/zh-CN/scripts/454120),
-南加北加论坛强化脚本(凛+).
+profiles, shared rules, and an automated upstream synchronization and release pipeline.
 
-Scripts awaiting conversion are tracked in the [conversion backlog](docs/conversion-backlog.md).
+All managed scripts, FireMonkey compatibility statuses, and direct one-click installation
+and update URLs for browser extensions are tracked in [Managed scripts](docs/managed-scripts.md)
+(conversion progress is also referenced in the [conversion backlog](docs/conversion-backlog.md)).
 
 The workspace includes contract validation, pinned profiles, rule matching,
 conservative conversion, and a CLI for source snapshots, static verification,
