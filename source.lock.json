@@ -5,11 +5,11 @@
       "schemaVersion": 1,
       "scriptId": "greasyfork-24204",
       "origin": {
-        "kind": "local",
-        "path": ".fm/adaptations/picviewer-ce"
+        "kind": "url",
+        "url": "https://update.greasyfork.org/scripts/24204/script.user.js"
       },
-      "retrievedAt": "2026-10-15T16:41:49.680Z",
-      "hash": "13cb48ebe60a0d35480cafaa1e8bd63abaf0bf7bda7e29ff96c99fd366168630",
+      "retrievedAt": "2026-10-15T18:17:47.181Z",
+      "hash": "0583af3f0ab35df661b166c8588e034596e2cf96fdd31d1efb38d29088d8054d",
       "dependencies": [
         {
           "url": "https://update.greasyfork.org/scripts/6158/23710/GM_config%20CN.js",
@@ -22,10 +22,6 @@
         {
           "url": "https://update.greasyfork.org/scripts/440698/1945643/pvcep_lang.js",
           "hash": "202a1b276ff6c87a0879b2864a3b1262b015e2208ef85832f4b4fe1f8baff0cb"
-        },
-        {
-          "url": "https://cdn.jsdelivr.net/npm/video.js@8.23.3/dist/video.min.js",
-          "hash": "41f59413f148335cb442008aad4c619c909e4ec17edef88e94685f11fb70d440"
         }
       ]
     },

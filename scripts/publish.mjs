@@ -18,7 +18,15 @@ export const MANAGED_SCRIPTS = [
     fallbackCandidatePath: 'artifacts/converted/greasyfork-24204-settings-fix.user.js',
     upstreamUrl: 'https://greasyfork.org/zh-CN/scripts/24204-picviewer-ce',
     expectedCandidateHash: '13cb48ebe60a0d35480cafaa1e8bd63abaf0bf7bda7e29ff96c99fd366168630',
-    version: '2026.9.29.1'
+    version: '2026.9.29.1',
+    rebuild: async (workspaceRoot) => {
+      const { runCli } = await import('../packages/cli/dist/index.js');
+      await runCli(['sync', '--config', 'config/scripts.picviewer-ce.json', '--project', 'greasyfork-24204'], { cwd: workspaceRoot });
+      const rebuildScript = path.resolve(workspaceRoot, 'scripts/adapters/picviewer-ce/rebuild.mjs');
+      const { execFile } = await import('node:child_process');
+      const { promisify } = await import('node:util');
+      await promisify(execFile)(process.execPath, [rebuildScript], { cwd: workspaceRoot });
+    }
   }
 ];
 
@@ -78,9 +86,17 @@ export async function publishScript(scriptDef, options = {}) {
     candidateSource = await fs.readFile(primaryCandidatePath, 'utf8');
   } catch (err) {
     if (scriptDef.fallbackCandidatePath) {
-      const fallbackPath = path.resolve(workspaceRoot, scriptDef.fallbackCandidatePath);
-      candidateSource = await fs.readFile(fallbackPath, 'utf8');
-    } else {
+      try {
+        const fallbackPath = path.resolve(workspaceRoot, scriptDef.fallbackCandidatePath);
+        candidateSource = await fs.readFile(fallbackPath, 'utf8');
+      } catch {}
+    }
+    if (!candidateSource && typeof scriptDef.rebuild === 'function') {
+      console.log(`Rebuilding candidate for ${scriptDef.id}...`);
+      await scriptDef.rebuild(workspaceRoot);
+      candidateSource = await fs.readFile(primaryCandidatePath, 'utf8');
+    }
+    if (!candidateSource) {
       throw err;
     }
   }

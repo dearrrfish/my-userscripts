@@ -30,14 +30,14 @@
     {
       "id": "greasyfork-24204",
       "upstream": {
-        "kind": "local",
-        "path": ".fm/adaptations/picviewer-ce"
+        "kind": "url",
+        "url": "https://update.greasyfork.org/scripts/24204/script.user.js"
       },
       "scripts": [
         {
           "id": "greasyfork-24204",
           "sourceManager": "unknown",
-          "outputPath": "greasyfork-24204-settings-fix.user.js",
+          "outputPath": "greasyfork-24204.user.js",
           "identity": {
             "name": "Picviewer CE+",
             "namespace": "https://github.com/hoothin/UserScripts"
@@ -47,8 +47,7 @@
           },
           "publish": {
             "mode": "disabled"
-          },
-          "sourcePath": "candidate.user.js"
+          }
         }
       ]
     }
