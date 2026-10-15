@@ -35,6 +35,7 @@ console.log('hello world');
 
   const parsed = parseMetadata(source);
   assert.ok(parsed.valid);
+  assert.equal(parsed.identity.name, 'Test Script [FM-Compat]');
 
   const versions = parsed.entries.filter(e => e.key === 'version');
   const downloads = parsed.entries.filter(e => e.key === 'downloadURL');

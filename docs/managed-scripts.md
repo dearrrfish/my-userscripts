@@ -25,16 +25,17 @@
 
 | 编号 / ID | 脚本名称 | 上游来源 | 状态 | 一键安装 (.user.js) | 自动更新 (.meta.js) | 说明文档 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `greasyfork-24204` | **Picviewer CE+** (在线图片查看器) | [Greasy Fork 24204](https://greasyfork.org/zh-CN/scripts/24204-picviewer-ce) | ✅ 已适配发布 (v2026.9.29.1) | [安装链接](https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-24204.user.js) | [更新检查](https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-24204.meta.js) | [适配记录](picviewer-ce-conversion.md) |
+| `greasyfork-24204` | **Picviewer CE+ [FM-Compat]** (在线图片查看器) | [Greasy Fork 24204](https://greasyfork.org/zh-CN/scripts/24204-picviewer-ce) | ✅ 已适配发布 (v2026.9.29.1) | [安装链接](https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-24204.user.js) | [更新检查](https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-24204.meta.js) | [适配记录](picviewer-ce-conversion.md) |
 | `greasyfork-454120` | **南加北加论坛强化脚本(凛+)** | [Greasy Fork 454120](https://greasyfork.org/zh-CN/scripts/454120) | ⏳ 追踪中 (候选适配待确认) | 待发布 | 待发布 | [配置说明](configuration.md) |
 
 ---
 
 ## 脚本详细状态与适配说明
 
-### 1. Picviewer CE+ (`greasyfork-24204`)
+### 1. Picviewer CE+ [FM-Compat] (`greasyfork-24204`)
 - **上游作者**: NLF && ywzhaiqi && hoothin
 - **当前发布版本**: `2026.9.29.1`
+- **脚本名称与共存机制**: 发布元数据中所有 `@name`（及多语言 `@name:*`）均追加了 ` [FM-Compat]` 后缀，避免与用户浏览器中已安装的原版脚本冲突或覆盖，支持双版本并存调试。
 - **上游快照 Hash**: `0583af3f0ab35df661b166c8588e034596e2cf96fdd31d1efb38d29088d8054d`
 - **兼容改写要点**:
   - **Gallery 样式引用**: 修复 FireMonkey 下样式节点插入返回值规范，确保 Gallery 启动不报错。

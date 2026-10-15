@@ -19,6 +19,7 @@ export const MANAGED_SCRIPTS = [
     upstreamUrl: 'https://greasyfork.org/zh-CN/scripts/24204-picviewer-ce',
     expectedCandidateHash: '13cb48ebe60a0d35480cafaa1e8bd63abaf0bf7bda7e29ff96c99fd366168630',
     version: '2026.9.29.1',
+    nameSuffix: ' [FM-Compat]',
     rebuild: async (workspaceRoot) => {
       const { runCli } = await import('../packages/cli/dist/index.js');
       await runCli(['sync', '--config', 'config/scripts.picviewer-ce.json', '--project', 'greasyfork-24204'], { cwd: workspaceRoot });
@@ -34,7 +35,7 @@ export function hash(data) {
   return createHash('sha256').update(data).digest('hex');
 }
 
-export function freezeMetadata(source, { scriptId, version, baseUrl }) {
+export function freezeMetadata(source, { scriptId, version, baseUrl, nameSuffix = ' [FM-Compat]' }) {
   const base = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
   const downloadUrl = new URL(`${scriptId}.user.js`, base).href;
   const updateUrl = new URL(`${scriptId}.meta.js`, base).href;
@@ -45,13 +46,33 @@ export function freezeMetadata(source, { scriptId, version, baseUrl }) {
   }
 
   let result = source;
-  // Remove existing version, downloadURL, updateURL entries in reverse order
-  for (const entry of [...parsed.entries].reverse()) {
+  const modifications = [];
+
+  // Remove existing version, downloadURL, updateURL entries and update name/name:*
+  for (const entry of parsed.entries) {
     if (['version', 'downloadURL', 'updateURL'].includes(entry.key)) {
-      const lineStart = result.lastIndexOf('\n', entry.start - 1) + 1;
-      const lineEnd = result.indexOf('\n', entry.end);
-      result = result.slice(0, lineStart) + result.slice(lineEnd < 0 ? result.length : lineEnd + 1);
+      const lineStart = source.lastIndexOf('\n', entry.start - 1) + 1;
+      const lineEnd = source.indexOf('\n', entry.end);
+      modifications.push({
+        start: lineStart,
+        end: lineEnd < 0 ? source.length : lineEnd + 1,
+        replacement: ''
+      });
+    } else if (nameSuffix && (entry.key === 'name' || entry.key.startsWith('name:'))) {
+      if (!entry.value.endsWith(nameSuffix.trim())) {
+        modifications.push({
+          start: entry.start,
+          end: entry.end,
+          replacement: `${entry.value}${nameSuffix}`
+        });
+      }
     }
+  }
+
+  // Apply all modifications in reverse offset order
+  modifications.sort((a, b) => b.start - a.start);
+  for (const mod of modifications) {
+    result = result.slice(0, mod.start) + mod.replacement + result.slice(mod.end);
   }
 
   const closeMatch = /^[ \t]*\/\/\s*==\/UserScript==[^\r\n]*/m.exec(result);
@@ -106,9 +127,10 @@ export async function publishScript(scriptDef, options = {}) {
     throw new Error(`Candidate hash mismatch for ${scriptDef.id}: expected ${scriptDef.expectedCandidateHash}, got ${candidateHash}`);
   }
 
-  // Freeze metadata with version, downloadURL, updateURL
+  // Freeze metadata with version, downloadURL, updateURL, and name suffix
   const version = scriptDef.version;
-  const frozen = freezeMetadata(candidateSource, { scriptId: scriptDef.id, version, baseUrl });
+  const nameSuffix = scriptDef.nameSuffix ?? ' [FM-Compat]';
+  const frozen = freezeMetadata(candidateSource, { scriptId: scriptDef.id, version, baseUrl, nameSuffix });
   const metaSource = extractMetadata(frozen.source, scriptDef.id);
 
   // Validate the frozen script and meta
@@ -139,7 +161,7 @@ export async function publishScript(scriptDef, options = {}) {
   const manifest = {
     schemaVersion: 1,
     scriptId: scriptDef.id,
-    name: scriptDef.name,
+    name: checkScript.identity.name,
     namespace: scriptDef.namespace,
     version,
     candidateHash,

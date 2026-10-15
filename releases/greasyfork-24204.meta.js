@@ -1,10 +1,10 @@
 // ==UserScript==
-// @name                 Picviewer CE+
-// @name:zh-CN           Picviewer CE+
-// @name:zh-TW           Picviewer CE+
-// @name:ja              Picviewer CE+
-// @name:pt-BR           Picviewer CE+
-// @name:ru              Picviewer CE+
+// @name                 Picviewer CE+ [FM-Compat]
+// @name:zh-CN           Picviewer CE+ [FM-Compat]
+// @name:zh-TW           Picviewer CE+ [FM-Compat]
+// @name:ja              Picviewer CE+ [FM-Compat]
+// @name:pt-BR           Picviewer CE+ [FM-Compat]
+// @name:ru              Picviewer CE+ [FM-Compat]
 // @author               NLF && ywzhaiqi && hoothin
 // @description          Powerful picture viewing tool online, which can popup/scale/rotate/batch save pictures automatically
 // @description:zh-CN    在线看图工具，支持图片翻转、旋转、缩放、弹出大图、批量保存
