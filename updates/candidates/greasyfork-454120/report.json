@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "scriptId": "greasyfork-454120",
+  "fingerprint": "cfd6866339cae6b29c812e77f1c9dfa7e3306c4e270d0c68fd75179503be5429",
+  "inputHash": "921966e614485a170dfb261e51bc2de6de159119835f7faa963d6e96707c5853",
+  "outputHash": "921966e614485a170dfb261e51bc2de6de159119835f7faa963d6e96707c5853",
+  "baselineState": "failed",
+  "candidateState": "blocked",
+  "providerStatus": "off",
+  "errors": 603,
+  "warnings": 327,
+  "unresolvedRuleIds": [],
+  "browser": "pending",
+  "fixture": "pending",
+  "eligible": false,
+  "identity": {
+    "name": "南加北加论坛强化脚本(凛+)",
+    "namespace": "tousakarin"
+  },
+  "profileId": "firemonkey-3.9-firefox-157.0",
+  "originalManualErrors": 0,
+  "provenance": {
+    "sourceHash": "921966e614485a170dfb261e51bc2de6de159119835f7faa963d6e96707c5853",
+    "sourceLockHash": "706f1ae620faf51ec480fcefa55458249782cb9329fdd20695151668b59e2584",
+    "dependencyHashes": [],
+    "repositoryConfigHash": "601a03da82368bf54384414e95f3a207d272754f1d3a9353056d66635d381082",
+    "updatesConfigHash": "7c9d396611d09ec715b0345aea57ed106fca6510ea7885b89d1175b4fcb10d93",
+    "profileHash": "843815a0539153dbb02c23b761802bc54696d43dd6bc064ce0a878fccf999851",
+    "rulesHash": "ceedce4a07700646ec5fa19d09d49f283cefc4494e1a99b481f75c341dc673cc",
+    "skillHash": "fde97d13f23ee49dbee5dd24fa9512071eeb28dfbcfc82410045fbcd8e3ff344",
+    "toolHash": "b8a8ff1b06f7e394f91ea78ce822e3b9c7fc70c14e3e618bf90c3be8781c6c4c",
+    "providerHash": "dea521948c10a73a963de7e66d0d4ee29be68a762017ec840bb005b310d2e699"
+  }
+}
