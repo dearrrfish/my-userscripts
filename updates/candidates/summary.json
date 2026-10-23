@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "reviewRoot": "updates/candidates",
+  "entries": [
+    {
+      "scriptId": "greasyfork-454120",
+      "fingerprint": "cfd6866339cae6b29c812e77f1c9dfa7e3306c4e270d0c68fd75179503be5429",
+      "candidatePath": "updates/candidates/greasyfork-454120/candidate.user.js",
+      "reportPath": "updates/candidates/greasyfork-454120/report.json",
+      "candidateHash": "921966e614485a170dfb261e51bc2de6de159119835f7faa963d6e96707c5853",
+      "reportHash": "1ceb4d3f9568960d6e57e2feca06e8c411a666d449175c01451883243a2dd7b3"
+    }
+  ]
+}
