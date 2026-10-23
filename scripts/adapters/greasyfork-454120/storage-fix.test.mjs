@@ -56,15 +56,36 @@ test('unbound FireMonkey GM.setValue throws TypeError when extracted without bin
   }, /this\.setValues is not a function/);
 });
 
-test('patched wrapper safely delegates to FireMonkey class GM without this context errors', async () => {
+test('patched wrapper safely delegates to FireMonkey storage without this context errors', async () => {
   const GM = MockFireMonkeyGM;
   GM.storage = {};
+  const inMemory = {};
+
+  const GM_getValue = (k, def) => (k in inMemory ? inMemory[k] : def);
+  const GM_setValue = (k, v) => { inMemory[k] = v; };
+  const GM_deleteValue = (k) => { delete inMemory[k]; };
+  const GM_listValues = () => Object.keys(inMemory);
 
   const safeGM = {
-    getValue: (key, defaultValue) => GM.getValue(key, defaultValue),
-    setValue: (key, value) => GM.setValue(key, value),
-    deleteValue: (key) => GM.deleteValue(key),
-    listValues: () => GM.listValues()
+    async getValue(key, defaultValue) {
+      const val = GM_getValue(key, defaultValue);
+      if (val !== undefined) return val;
+      const asyncVal = await GM.getValue(key, defaultValue !== undefined ? defaultValue : null);
+      return asyncVal !== null ? asyncVal : defaultValue;
+    },
+    async setValue(key, value) {
+      GM_setValue(key, value);
+      await GM.setValue(key, value);
+    },
+    async deleteValue(key) {
+      GM_deleteValue(key);
+      await GM.deleteValue(key);
+    },
+    async listValues() {
+      const set = new Set(GM_listValues());
+      (await GM.listValues()).forEach(k => set.add(k));
+      return Array.from(set);
+    }
   };
 
   await safeGM.setValue('pref_user_1', '{"theme":"dark"}');
@@ -85,8 +106,8 @@ test('applyStorageFix applies cleanly to 454120 upstream source', () => {
 
   const patched = applyStorageFix(input);
   assert.notEqual(patched, input);
-  assert.ok(patched.includes('setValue: (key, value) => GM.setValue(key, value)'));
+  assert.ok(patched.includes('typeof GM_getValue === \'function\''));
+  assert.ok(patched.includes('value === null || value === undefined || value === \'\''));
   assert.ok(patched.includes('const size = chunkSize || 20;'));
-  assert.ok(patched.includes('setTimeout(() => document.location.reload(), 300)'));
-  assert.ok(!patched.includes('setValue: GM.setValue,'));
+  assert.ok(patched.includes('setTimeout(() => document.location.reload(), 1000)'));
 });

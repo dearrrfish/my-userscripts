@@ -24,6 +24,6 @@ test('applyLintFix produces candidate that passes staticVerify with 0 lint error
   assert.equal(lintVerification.status, 'passed', 'lint verification should be passed');
 
   // Verify storage patch retention
-  assert.ok(cleaned.includes('setValue: (key, value) => GM.setValue(key, value)'));
+  assert.ok(cleaned.includes('typeof GM_getValue === \'function\''));
   assert.ok(cleaned.includes('chunkSize || 20'));
 });

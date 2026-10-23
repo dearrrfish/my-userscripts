@@ -45,7 +45,7 @@
 // @match        *://*.imoutolove.me/*
 // @match        *://imoutolove.me/*
 // @run-at       document-start
-// @version              100.0.1
+// @version              100.0.2
 // @downloadURL          https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-454120.user.js
 // @updateURL            https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-454120.meta.js
 // ==/UserScript==
@@ -65,29 +65,60 @@ function initGM() {
         }
     } catch  {}
 
-    if (gmExists) {
-        return {
-            getValue: (key, defaultValue) => GM.getValue(key, defaultValue),
-            setValue: (key, value) => GM.setValue(key, value),
-            async deleteValue(key) {
-                return await GM.deleteValue(key);
-            },
-            listValues: () => GM.listValues(),
-            notification: (...args) => GM.notification(...args),
-            openInTab: (...args) => GM.openInTab(...args),
-            registerMenuCommand: (...args) => GM.registerMenuCommand(...args)
-        };
-    }
     return {
-        getValue: GM_getValue,
-        setValue: GM_setValue,
-        async deleteValue(key) {
-            return GM_deleteValue(key);
+        async getValue(key, defaultValue) {
+            if (typeof GM_getValue === 'function') {
+                const val = GM_getValue(key, defaultValue);
+                if (val !== undefined) {
+                    return val;
+                }
+            }
+            if (gmExists) {
+                const val = await GM.getValue(key, defaultValue !== undefined ? defaultValue : null);
+                return val !== null ? val : defaultValue;
+            }
+            return typeof GM_getValue === 'function' ? GM_getValue(key, defaultValue) : defaultValue;
         },
-        listValues: GM_listValues,
-        notification: GM_notification,
-        openInTab: GM_openInTab,
-        registerMenuCommand: GM_registerMenuCommand
+        async setValue(key, value) {
+            if (typeof GM_setValue === 'function') {
+                try {
+                    GM_setValue(key, value);
+                } catch  {}
+            }
+            if (gmExists) {
+                await GM.setValue(key, value);
+            }
+        },
+        async deleteValue(key) {
+            if (typeof GM_deleteValue === 'function') {
+                try {
+                    GM_deleteValue(key);
+                } catch  {}
+            }
+            if (gmExists) {
+                await GM.deleteValue(key);
+            }
+        },
+        async listValues() {
+            const list = new Set();
+            if (typeof GM_listValues === 'function') {
+                try {
+                    GM_listValues().forEach(k => list.add(k));
+                } catch  {}
+            }
+            if (gmExists) {
+                try {
+                    const asyncList = await GM.listValues();
+                    if (Array.isArray(asyncList)) {
+                        asyncList.forEach(k => list.add(k));
+                    }
+                } catch  {}
+            }
+            return Array.from(list);
+        },
+        notification: (...args) => (gmExists && GM.notification ? GM.notification(...args) : GM_notification(...args)),
+        openInTab: (...args) => (gmExists && GM.openInTab ? GM.openInTab(...args) : GM_openInTab(...args)),
+        registerMenuCommand: (...args) => (gmExists && GM.registerMenuCommand ? GM.registerMenuCommand(...args) : GM_registerMenuCommand(...args))
     };
 }
 (function() {
@@ -8054,7 +8085,7 @@ async function init() {
                                 runWithProgressPopup(action, '导入中...', null, 5000)
                                     .then(() => {
                                         if (!cancelled) {
-                                            setTimeout(() => document.location.reload(), 300);
+                                            setTimeout(() => document.location.reload(), 1000);
                                         }
                                     })
                                     .catch(ex => { console.error(ex); alert('' + ex); });
@@ -8071,7 +8102,7 @@ async function init() {
                                     return '✔️导入完成，自动刷新窗口';
                                 };
                                 runWithProgressPopup(action, '导入中...', null, 5000)
-                                    .then(() => setTimeout(() => document.location.reload(), 300))
+                                    .then(() => setTimeout(() => document.location.reload(), 1000))
                                     .catch(ex => { console.error(ex); alert('' + ex); });
                             }
                         }
@@ -8142,7 +8173,7 @@ async function init() {
 
         // a single corrupt stored value should skip that record, not abort the whole merge
         function tryParseJson(key, value, fallback) {
-            if (value === null || value === '') {return fallback;}
+            if (value === null || value === undefined || value === '') {return fallback;}
             if (typeof value !== 'string') {return value;} // already an object (GM can store non-strings)
             try {
                 return JSON.parse(value);

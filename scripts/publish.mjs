@@ -36,8 +36,8 @@ export const MANAGED_SCRIPTS = [
     candidatePath: '.fm/adaptations/greasyfork-454120/candidate.user.js',
     fallbackCandidatePath: 'artifacts/converted/greasyfork-454120-storage-fix.user.js',
     upstreamUrl: 'https://sleazyfork.org/zh-CN/scripts/454120',
-    expectedCandidateHash: '28fc892d1b8837cfd91ebc86079cbe93500667d8cec53aa172f9dfd6c823447d',
-    version: '100.0.1',
+    expectedCandidateHash: 'de8c9c2dd5d5014084e05a621633c8693df063834b550f9804a7c51ad090939d',
+    version: '100.0.2',
     nameSuffix: ' [FM-Compat]',
     rebuild: async (workspaceRoot) => {
       const rebuildScript = path.resolve(workspaceRoot, 'scripts/adapters/greasyfork-454120/rebuild.mjs');

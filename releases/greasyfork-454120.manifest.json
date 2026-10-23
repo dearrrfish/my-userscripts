@@ -3,12 +3,12 @@
   "scriptId": "greasyfork-454120",
   "name": "南加北加论坛强化脚本(凛+) [FM-Compat]",
   "namespace": "tousakarin",
-  "version": "100.0.1",
-  "candidateHash": "28fc892d1b8837cfd91ebc86079cbe93500667d8cec53aa172f9dfd6c823447d",
-  "userJsHash": "c51ff87d182388943fe61a7017a79ed1431475cec7786a49cdcb6c1450b4dbe4",
-  "metaJsHash": "607ae87f7e4967efc5a3198b012a97d0d598ef513665ef327d7fcaede613aebd",
+  "version": "100.0.2",
+  "candidateHash": "de8c9c2dd5d5014084e05a621633c8693df063834b550f9804a7c51ad090939d",
+  "userJsHash": "08817b00bb6dc3e651face3fad5922da8236030aaae9eef3daca52ce6f9a95b9",
+  "metaJsHash": "9807b4c94daa484b1811e068e7a9654c4f84196d7a9151fcbab059cdc1c8f613",
   "downloadUrl": "https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-454120.user.js",
   "updateUrl": "https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-454120.meta.js",
   "upstreamUrl": "https://sleazyfork.org/zh-CN/scripts/454120",
-  "publishedAt": "2026-10-23T00:04:56.956Z"
+  "publishedAt": "2026-10-23T00:38:40.335Z"
 }

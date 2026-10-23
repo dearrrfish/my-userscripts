@@ -26,7 +26,7 @@
 | 编号 / ID | 脚本名称 | 上游来源 | 状态 | 一键安装 (.user.js) | 自动更新 (.meta.js) | 说明文档 |
 | --- | --- | --- | --- | --- | --- | --- |
 | `greasyfork-24204` | **Picviewer CE+ [FM-Compat]** (在线图片查看器) | [Greasy Fork 24204](https://greasyfork.org/zh-CN/scripts/24204-picviewer-ce) | ✅ 已适配发布 (v2026.9.29.1) | [安装链接](https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-24204.user.js) | [更新检查](https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-24204.meta.js) | [适配记录](picviewer-ce-conversion.md) |
-| `greasyfork-454120` | **南加北加论坛强化脚本(凛+) [FM-Compat]** | [Sleazy Fork 454120](https://sleazyfork.org/zh-CN/scripts/454120) / [Greasy Fork](https://greasyfork.org/zh-CN/scripts/454120) | ✅ 已适配发布 (v100.0.1) | [安装链接](https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-454120.user.js) | [更新检查](https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-454120.meta.js) | [适配说明](#2-南加北加论坛强化脚本凛-greasyfork-454120) |
+| `greasyfork-454120` | **南加北加论坛强化脚本(凛+) [FM-Compat]** | [Sleazy Fork 454120](https://sleazyfork.org/zh-CN/scripts/454120) / [Greasy Fork](https://greasyfork.org/zh-CN/scripts/454120) | ✅ 已适配发布 (v100.0.2) | [安装链接](https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-454120.user.js) | [更新检查](https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-454120.meta.js) | [适配说明](#2-南加北加论坛强化脚本凛-greasyfork-454120) |
 
 ---
 
@@ -49,7 +49,7 @@
 
 ### 2. 南加北加论坛强化脚本(凛+) (`greasyfork-454120`)
 - **上游作者**: tousakarin
-- **当前发布版本**: `100.0.1`
+- **当前发布版本**: `100.0.2`
 - **脚本名称与共存机制**: 发布元数据中追加了 ` [FM-Compat]` 后缀，避免与原版脚本冲突。
 - **上游来源与追踪**: 支持 Sleazy Fork 智能镜像回退与可选凭据支持，定时更新管线每周稳定追踪。
 - **兼容改写与适配要点**:
