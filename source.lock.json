@@ -29,11 +29,11 @@
       "schemaVersion": 1,
       "scriptId": "greasyfork-454120",
       "origin": {
-        "kind": "url",
-        "url": "https://update.greasyfork.org/scripts/454120/script.user.js"
+        "kind": "local",
+        "path": ".fm/adaptations/greasyfork-454120"
       },
-      "retrievedAt": "2026-10-15T18:08:10.612Z",
-      "hash": "921966e614485a170dfb261e51bc2de6de159119835f7faa963d6e96707c5853",
+      "retrievedAt": "2026-10-22T23:28:49.224Z",
+      "hash": "f0af0f7cb883fd8d6e853dbaaf768a47f12b7d7a0e444323a4a12e18aa3ca9f8",
       "dependencies": []
     }
   ]

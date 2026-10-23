@@ -60,20 +60,90 @@ export function safeUrl(value: any) {
   if (!['https:', 'http:'].includes(u.protocol) || u.username || u.password || u.hash || u.search) { throw new CliError('Source URL must use HTTP(S) without credentials, query or fragment'); }
   return u.href;
 }
-export function download(value: string, raw: true): Promise<Buffer>;
-export function download(value: string, raw?: false): Promise<string>;
-export async function download(value: string, raw: boolean = false): Promise<string | Buffer> {
-  let url = safeUrl(value);
+export function getMirrorUrl(value: string): string | null {
+  try {
+    const u = new URL(value);
+    if (u.hostname === 'update.greasyfork.org') {
+      u.hostname = 'update.sleazyfork.org';
+      return u.href;
+    }
+    if (u.hostname === 'greasyfork.org') {
+      u.hostname = 'sleazyfork.org';
+      return u.href;
+    }
+    if (u.hostname === 'update.sleazyfork.org') {
+      u.hostname = 'update.greasyfork.org';
+      return u.href;
+    }
+    if (u.hostname === 'sleazyfork.org') {
+      u.hostname = 'greasyfork.org';
+      return u.href;
+    }
+  } catch {}
+  return null;
+}
+function getAuthHeaders(urlStr: string): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const cookie = process.env.GREASYFORK_COOKIE || process.env.FM_GREASYFORK_COOKIE;
+  if (cookie) {
+    try {
+      const u = new URL(urlStr);
+      if (u.hostname.endsWith('greasyfork.org') || u.hostname.endsWith('sleazyfork.org')) {
+        headers['Cookie'] = cookie;
+      }
+    } catch {}
+  }
+  return headers;
+}
+async function fetchTarget(targetUrl: string, raw: boolean): Promise<string | Buffer> {
+  let url = safeUrl(targetUrl);
   for (let i = 0; i < 5; i++) {
-    const response = await fetch(url, { signal: AbortSignal.timeout(15000), redirect: 'manual' });
-    if ([301,302,303,307,308].includes(response.status)) { const location = response.headers.get('location'); if (!location) { throw new CliError('Redirect has no location'); } url = safeUrl(new URL(location, url).href); continue; }
+    const headers = getAuthHeaders(url);
+    const response = await fetch(url, { signal: AbortSignal.timeout(15000), redirect: 'manual', headers });
+    if ([301,302,303,307,308].includes(response.status)) {
+      const location = response.headers.get('location');
+      if (!location) { throw new CliError('Redirect has no location'); }
+      const resolved = new URL(location, url);
+      if (resolved.pathname.includes('/users/sign_in')) {
+        throw new CliError('Source requires login');
+      }
+      url = safeUrl(resolved.href);
+      continue;
+    }
     if (!response.ok) { throw new CliError(`Source download HTTP ${response.status}`); }
     if (!response.body) { throw new CliError('Source download has no body'); }
     const chunks: Uint8Array[] = []; let size = 0;
-    for await (const chunk of response.body) { size += chunk.length; if (size > MAX) { throw new CliError('Source exceeds size limit'); } chunks.push(chunk); }
-    const bytes = Buffer.concat(chunks); return raw ? bytes : decode(bytes);
+    for await (const chunk of response.body) {
+      size += chunk.length;
+      if (size > MAX) { throw new CliError('Source exceeds size limit'); }
+      chunks.push(chunk);
+    }
+    const bytes = Buffer.concat(chunks);
+    const textPreview = new TextDecoder('utf-8', { fatal: false }).decode(bytes.subarray(0, 4096));
+    if (textPreview.includes('This script is no longer anonymously available on this site')) {
+      throw new CliError('Source requires login');
+    }
+    return raw ? bytes : decode(bytes);
   }
   throw new CliError('Too many source redirects');
+}
+export function download(value: string, raw: true): Promise<Buffer>;
+export function download(value: string, raw?: false): Promise<string>;
+export async function download(value: string, raw: boolean = false): Promise<string | Buffer> {
+  const primaryUrl = safeUrl(value);
+  try {
+    return await fetchTarget(primaryUrl, raw);
+  } catch (err: any) {
+    const mirror = getMirrorUrl(primaryUrl);
+    if (mirror && mirror !== primaryUrl) {
+      try {
+        return await fetchTarget(mirror, raw);
+      } catch {
+        throw err;
+      }
+    }
+    throw err;
+  }
 }
 async function configContext(file: string, cwd: string) {
   const root = await fs.realpath(cwd);

@@ -28,6 +28,23 @@ export const MANAGED_SCRIPTS = [
       const { promisify } = await import('node:util');
       await promisify(execFile)(process.execPath, [rebuildScript], { cwd: workspaceRoot });
     }
+  },
+  {
+    id: 'greasyfork-454120',
+    name: '南加北加论坛强化脚本(凛+)',
+    namespace: 'tousakarin',
+    candidatePath: '.fm/adaptations/greasyfork-454120/candidate.user.js',
+    fallbackCandidatePath: 'artifacts/converted/greasyfork-454120-storage-fix.user.js',
+    upstreamUrl: 'https://sleazyfork.org/zh-CN/scripts/454120',
+    expectedCandidateHash: '28fc892d1b8837cfd91ebc86079cbe93500667d8cec53aa172f9dfd6c823447d',
+    version: '100.0.1',
+    nameSuffix: ' [FM-Compat]',
+    rebuild: async (workspaceRoot) => {
+      const rebuildScript = path.resolve(workspaceRoot, 'scripts/adapters/greasyfork-454120/rebuild.mjs');
+      const { execFile } = await import('node:child_process');
+      const { promisify } = await import('node:util');
+      await promisify(execFile)(process.execPath, [rebuildScript], { cwd: workspaceRoot });
+    }
   }
 ];
 

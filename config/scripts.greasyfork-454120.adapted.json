@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "outputRoot": "artifacts/converted",
+  "targetProfile": "firemonkey-3.9-firefox-157.0",
+  "projects": [
+    {
+      "id": "greasyfork-454120",
+      "upstream": {
+        "kind": "local",
+        "path": ".fm/adaptations/greasyfork-454120"
+      },
+      "scripts": [
+        {
+          "id": "greasyfork-454120",
+          "sourceManager": "unknown",
+          "outputPath": "greasyfork-454120-storage-fix.user.js",
+          "identity": {
+            "name": "南加北加论坛强化脚本(凛+)",
+            "namespace": "tousakarin"
+          },
+          "acceptance": {
+            "checklistId": "greasyfork-454120-runtime"
+          },
+          "publish": {
+            "mode": "disabled"
+          },
+          "sourcePath": "candidate.user.js"
+        }
+      ]
+    }
+  ]
+}

@@ -26,7 +26,7 @@
 | 编号 / ID | 脚本名称 | 上游来源 | 状态 | 一键安装 (.user.js) | 自动更新 (.meta.js) | 说明文档 |
 | --- | --- | --- | --- | --- | --- | --- |
 | `greasyfork-24204` | **Picviewer CE+ [FM-Compat]** (在线图片查看器) | [Greasy Fork 24204](https://greasyfork.org/zh-CN/scripts/24204-picviewer-ce) | ✅ 已适配发布 (v2026.9.29.1) | [安装链接](https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-24204.user.js) | [更新检查](https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-24204.meta.js) | [适配记录](picviewer-ce-conversion.md) |
-| `greasyfork-454120` | **南加北加论坛强化脚本(凛+)** | [Greasy Fork 454120](https://greasyfork.org/zh-CN/scripts/454120) | ⏳ 追踪中 (候选适配待确认) | 待发布 | 待发布 | [配置说明](configuration.md) |
+| `greasyfork-454120` | **南加北加论坛强化脚本(凛+) [FM-Compat]** | [Sleazy Fork 454120](https://sleazyfork.org/zh-CN/scripts/454120) / [Greasy Fork](https://greasyfork.org/zh-CN/scripts/454120) | ✅ 已适配发布 (v100.0.1) | [安装链接](https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-454120.user.js) | [更新检查](https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-454120.meta.js) | [适配说明](#2-南加北加论坛强化脚本凛-greasyfork-454120) |
 
 ---
 
@@ -49,7 +49,17 @@
 
 ### 2. 南加北加论坛强化脚本(凛+) (`greasyfork-454120`)
 - **上游作者**: tousakarin
-- **当前状态**: 上游版本已锁定（见 `config/sources/greasyfork-454120.lock.json`）。自动化定时更新工作流每周持续检测上游变动。待人工审查与高级特性适配后发布。
+- **当前发布版本**: `100.0.1`
+- **脚本名称与共存机制**: 发布元数据中追加了 ` [FM-Compat]` 后缀，避免与原版脚本冲突。
+- **上游来源与追踪**: 支持 Sleazy Fork 智能镜像回退与可选凭据支持，定时更新管线每周稳定追踪。
+- **兼容改写与适配要点**:
+  - **存储上下文解绑修复**: 修复 FireMonkey 下 `initGM()` 提取未绑定静态方法导致的 `TypeError: this.setValues is not a function`，改用箭头函数安全委托调用。
+  - **IPC 与刷新缓冲**: 将 `runGMBatch` 并发分批从 100 降为 20，避免 WebExtension 消息队列溢出；在设置导入刷新前增加 300ms 磁盘持久化延迟。
+  - **ESLint 语法深度清洗**: 全量修复原脚本中 601 处 ESLint 错误（`eqeqeq`、`no-redeclare`、`no-unused-vars`、`no-useless-escape`、`no-control-regex`、`no-irregular-whitespace`），通过 FireMonkey 3.9 / Firefox 157.0 静态检验。
+- **发布产物**:
+  - 完整脚本: [`releases/greasyfork-454120.user.js`](../releases/greasyfork-454120.user.js)
+  - 检查头: [`releases/greasyfork-454120.meta.js`](../releases/greasyfork-454120.meta.js)
+  - 证据清单: [`releases/greasyfork-454120.manifest.json`](../releases/greasyfork-454120.manifest.json)
 
 ### 3. 静态保留脚本 (`legacy-static/`)
 仓库历史静态脚本存放于 [`legacy-static/`](../legacy-static) 目录，未纳入自动化转换管线，保持原样：

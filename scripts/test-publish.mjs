@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { freezeMetadata, extractMetadata, publishScript, hash, DEFAULT_BASE_URL } from './publish.mjs';
-import { parseMetadata } from '../packages/converter/dist/index.js';
+import { freezeMetadata, extractMetadata, publishScript, hash, DEFAULT_BASE_URL, MANAGED_SCRIPTS } from './publish.mjs';
+import { parseMetadata, staticVerify } from '../packages/converter/dist/index.js';
 
 const root = path.resolve(fileURLToPath(import.meta.url), '../..');
 
@@ -132,6 +132,30 @@ test('publishScript publishes valid files and manifest into release root', async
   assert.equal(manifestContent.version, '1.0.0');
   assert.equal(manifestContent.userJsHash, hash(userJsContent));
   assert.equal(manifestContent.metaJsHash, hash(metaJsContent));
+
+  await fs.rm(tmpDir, { recursive: true, force: true });
+});
+
+test('managed greasyfork-454120 publishes with valid metadata and candidate hash', async () => {
+  const scriptDef = MANAGED_SCRIPTS.find(s => s.id === 'greasyfork-454120');
+  assert.ok(scriptDef, 'greasyfork-454120 should be in MANAGED_SCRIPTS');
+
+  const tmpDir = await fs.mkdtemp(path.join(root, '.fm/publish-454120-test-'));
+  const res = await publishScript(scriptDef, {
+    workspaceRoot: root,
+    releaseRoot: path.relative(root, path.join(tmpDir, 'releases')),
+    baseUrl: DEFAULT_BASE_URL
+  });
+
+  assert.equal(res.scriptId, 'greasyfork-454120');
+  assert.equal(res.version, '100.0.1');
+
+  const userJsContent = await fs.readFile(res.userJsPath, 'utf8');
+  const parsed = parseMetadata(userJsContent);
+  assert.ok(parsed.valid);
+  assert.equal(parsed.identity.name, '南加北加论坛强化脚本(凛+) [FM-Compat]');
+  assert.equal(parsed.entries.find(e => e.key === 'version')?.value, '100.0.1');
+  assert.equal(parsed.entries.find(e => e.key === 'downloadURL')?.value, 'https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-454120.user.js');
 
   await fs.rm(tmpDir, { recursive: true, force: true });
 });

@@ -1,0 +1,51 @@
+// ==UserScript==
+// @name         南加北加论坛强化脚本(凛+) [FM-Compat]
+// @description  加强东南北+功能: 太多了请看功能简介
+// @author       遠坂凛
+// @namespace    tousakarin
+// @license      MIT
+// @icon         data:image/gif;base64,R0lGODlhEAAQAKIAAKIbG8dXV/339+atrfHMzOGXl9d3d7QxMSH5BAAAAAAALAAAAAAQABAAAANSKBPX0Ma8MBR7GBA5y81AdIihgxWW+I0PsURVAQoXNQwtB0EolYOTza0HPI0EtCKug5RlAsjZwtQSPJGEqIljGGa3IN+EJT55XDnUdHwgOCiCBAA7
+// @grant        unsafeWindow
+// @grant        GM.getValue
+// @grant        GM.setValue
+// @grant        GM.deleteValue
+// @grant        GM.listValues
+// @grant        GM.notification
+// @grant        GM.openInTab
+// @grant        GM.registerMenuCommand
+// @grant        GM_getValue
+// @grant        GM_setValue
+// @grant        GM_deleteValue
+// @grant        GM_listValues
+// @grant        GM_notification
+// @grant        GM_openInTab
+// @grant        GM_registerMenuCommand
+// @match        *://*.east-plus.net/*
+// @match        *://east-plus.net/*
+// @match        *://*.south-plus.net/*
+// @match        *://south-plus.net/*
+// @match        *://*.south-plus.org/*
+// @match        *://south-plus.org/*
+// @match        *://*.white-plus.net/*
+// @match        *://white-plus.net/*
+// @match        *://*.north-plus.net/*
+// @match        *://north-plus.net/*
+// @match        *://*.level-plus.net/*
+// @match        *://level-plus.net/*
+// @match        *://*.soul-plus.net/*
+// @match        *://soul-plus.net/*
+// @match        *://*.snow-plus.net/*
+// @match        *://snow-plus.net/*
+// @match        *://*.spring-plus.net/*
+// @match        *://spring-plus.net/*
+// @match        *://*.summer-plus.net/*
+// @match        *://summer-plus.net/*
+// @match        *://*.blue-plus.net/*
+// @match        *://blue-plus.net/*
+// @match        *://*.imoutolove.me/*
+// @match        *://imoutolove.me/*
+// @run-at       document-start
+// @version              100.0.1
+// @downloadURL          https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-454120.user.js
+// @updateURL            https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-454120.meta.js
+// ==/UserScript==
