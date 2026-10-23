@@ -107,7 +107,9 @@ test('applyStorageFix applies cleanly to 454120 upstream source', () => {
   const patched = applyStorageFix(input);
   assert.notEqual(patched, input);
   assert.ok(patched.includes('typeof GM_getValue === \'function\''));
-  assert.ok(patched.includes('value === null || value === undefined || value === \'\''));
+  assert.ok(patched.includes('value == null || value === undefined || value === \'\''));
+  assert.ok(patched.includes('const parsed = typeof savedData === \'string\' ? JSON.parse(savedData) : savedData;'));
+  assert.ok(patched.includes('let watchList = typeof sSavedData === \'string\' ? JSON.parse(sSavedData) : (sSavedData || {});'));
   assert.ok(patched.includes('const size = chunkSize || 20;'));
   assert.ok(patched.includes('setTimeout(() => document.location.reload(), 1000)'));
 });

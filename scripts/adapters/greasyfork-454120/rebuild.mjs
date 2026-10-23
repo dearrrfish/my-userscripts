@@ -4,7 +4,6 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { hash } from '../../../packages/converter/dist/index.js';
 import { applyStorageFix } from './storage-fix.mjs';
-import { applyLintFix } from './lint-fix.mjs';
 
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 assert.equal(fs.realpathSync(process.cwd()), fs.realpathSync(root), 'Run from the repository root');
@@ -23,9 +22,8 @@ assert.equal(hash(input), inputHash, 'Unexpected upstream hash; source differs f
 fs.mkdirSync(base, { recursive: true });
 const destination = path.join(base, 'candidate.user.js');
 
-const patchedStorage = applyStorageFix(input);
-const cleaned = applyLintFix(patchedStorage);
-fs.writeFileSync(destination, cleaned, 'utf8');
+const candidate = applyStorageFix(input);
+fs.writeFileSync(destination, candidate, 'utf8');
 
-const outputHash = hash(cleaned);
-console.log(`Rebuilt FireMonkey-adapted & lint-cleaned candidate for 454120: ${outputHash}`);
+const outputHash = hash(candidate);
+console.log(`Rebuilt FireMonkey-adapted candidate for 454120: ${outputHash}`);

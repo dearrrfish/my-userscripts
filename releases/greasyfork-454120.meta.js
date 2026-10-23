@@ -45,7 +45,7 @@
 // @match        *://*.imoutolove.me/*
 // @match        *://imoutolove.me/*
 // @run-at       document-start
-// @version              100.0.2
+// @version              100.0.3
 // @downloadURL          https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-454120.user.js
 // @updateURL            https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-454120.meta.js
 // ==/UserScript==

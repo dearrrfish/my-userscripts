@@ -117,9 +117,6 @@ export function applyStorageFix(source) {
   }
 
   // 2. Fix tryParseJson in mergeUserData to guard against undefined values
-  // Upstream had: if (value == null || value === '') return fallback;
-  // Blind eqeqeq fixes replace == with ===, breaking undefined checks and causing:
-  // TypeError: can't access property "terms", newData is undefined
   const originalTryParse = `        // a single corrupt stored value should skip that record, not abort the whole merge
         function tryParseJson(key, value, fallback) {
             if (value == null || value === '') return fallback;
@@ -127,7 +124,7 @@ export function applyStorageFix(source) {
 
   const fixedTryParse = `        // a single corrupt stored value should skip that record, not abort the whole merge
         function tryParseJson(key, value, fallback) {
-            if (value === null || value === undefined || value === '') return fallback;
+            if (value == null || value === undefined || value === '') return fallback;
             if (typeof value !== 'string') return value; // already an object (GM can store non-strings)`;
 
   if (result.includes(originalTryParse)) {
@@ -136,7 +133,49 @@ export function applyStorageFix(source) {
     throw new Error('Could not find exact tryParseJson implementation to patch in source');
   }
 
-  // 3. Reduce runGMBatch chunk size from 100 to 20 for FireMonkey WebExtension IPC stability
+  // 3. Make readUserConfig robust to both stringified JSON and native Object storage
+  const originalReadUserConfig = `async function readUserConfig(myUserId, configKey, defaultValue) {
+    try {
+        let savedData = await GM.getValue(configKey + '#' + myUserId);
+        return Object.assign({}, defaultValue, JSON.parse(savedData));
+    } catch (e) {}
+    return Object.assign({}, defaultValue);
+}`;
+
+  const fixedReadUserConfig = `async function readUserConfig(myUserId, configKey, defaultValue) {
+    try {
+        let savedData = await GM.getValue(configKey + '#' + myUserId);
+        if (savedData == null) return Object.assign({}, defaultValue);
+        const parsed = typeof savedData === 'string' ? JSON.parse(savedData) : savedData;
+        return Object.assign({}, defaultValue, parsed);
+    } catch (e) {}
+    return Object.assign({}, defaultValue);
+}`;
+
+  if (result.includes(originalReadUserConfig)) {
+    result = result.replace(originalReadUserConfig, fixedReadUserConfig);
+  } else {
+    throw new Error('Could not find exact readUserConfig implementation to patch in source');
+  }
+
+  // 4. Make readWatchList robust to both stringified JSON and native Object storage
+  const originalReadWatchList = `    async function readWatchList() {
+        try {
+            let sSavedData = await GM.getValue('my_watchlist#' + myUserId);
+            let watchList = JSON.parse(sSavedData);`;
+
+  const fixedReadWatchList = `    async function readWatchList() {
+        try {
+            let sSavedData = await GM.getValue('my_watchlist#' + myUserId);
+            let watchList = typeof sSavedData === 'string' ? JSON.parse(sSavedData) : (sSavedData || {});`;
+
+  if (result.includes(originalReadWatchList)) {
+    result = result.replace(originalReadWatchList, fixedReadWatchList);
+  } else {
+    throw new Error('Could not find exact readWatchList implementation to patch in source');
+  }
+
+  // 5. Reduce runGMBatch chunk size from 100 to 20 for FireMonkey WebExtension IPC stability
   const originalBatch = `    async function runGMBatch(items, asyncFunc, chunkSize) {
         const size = chunkSize || 100;`;
   const fixedBatch = `    async function runGMBatch(items, asyncFunc, chunkSize) {
@@ -148,7 +187,7 @@ export function applyStorageFix(source) {
     throw new Error('Could not find exact runGMBatch implementation to patch in source');
   }
 
-  // 4. Add 1000ms flush buffer before location.reload() to guarantee storage persistence
+  // 6. Add 1000ms flush buffer before location.reload() to guarantee storage persistence
   const originalReload1 = `                                runWithProgressPopup(action, '导入中...', null, 5000)
                                     .then(() => {
                                         if (!cancelled) {

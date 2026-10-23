@@ -45,13 +45,14 @@
 // @match        *://*.imoutolove.me/*
 // @match        *://imoutolove.me/*
 // @run-at       document-start
-// @version              100.0.2
+// @version              100.0.3
 // @downloadURL          https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-454120.user.js
 // @updateURL            https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-454120.meta.js
 // ==/UserScript==
 
 /* jshint undef: true, unused: true */
 /* jshint -W107, -W098, -W069 */
+/* globals unsafeWindow, window, document, navigator, atob, btoa, location, localStorage, fetch, console, alert, confirm, prompt, setInterval, setTimeout, clearTimeout, FileReader, FormData, Blob, URL, URLSearchParams, TextEncoder, CompressionStream, DecompressionStream, Response, MutationObserver, DOMParser, GM, GM_getValue, GM_setValue, GM_deleteValue, GM_listValues, GM_notification, GM_openInTab, GM_registerMenuCommand */
 
 const VERSION_MAJOR = 100;
 const VERSION_FULL = 10000;
@@ -63,7 +64,7 @@ function initGM() {
         if (typeof GM !== 'undefined' && typeof GM.getValue === 'function') {
             gmExists = true;
         }
-    } catch  {}
+    } catch (ignore) {}
 
     return {
         async getValue(key, defaultValue) {
@@ -83,7 +84,7 @@ function initGM() {
             if (typeof GM_setValue === 'function') {
                 try {
                     GM_setValue(key, value);
-                } catch  {}
+                } catch (ignore) {}
             }
             if (gmExists) {
                 await GM.setValue(key, value);
@@ -93,7 +94,7 @@ function initGM() {
             if (typeof GM_deleteValue === 'function') {
                 try {
                     GM_deleteValue(key);
-                } catch  {}
+                } catch (ignore) {}
             }
             if (gmExists) {
                 await GM.deleteValue(key);
@@ -104,7 +105,7 @@ function initGM() {
             if (typeof GM_listValues === 'function') {
                 try {
                     GM_listValues().forEach(k => list.add(k));
-                } catch  {}
+                } catch (ignore) {}
             }
             if (gmExists) {
                 try {
@@ -112,7 +113,7 @@ function initGM() {
                     if (Array.isArray(asyncList)) {
                         asyncList.forEach(k => list.add(k));
                     }
-                } catch  {}
+                } catch (ignore) {}
             }
             return Array.from(list);
         },
@@ -331,10 +332,10 @@ function joinThreadFilterList(terms, tids) {
 }
 
 function normalizeThreadFilterConfig(filterConfig) {
-    if (filterConfig === null) {
+    if (filterConfig == null) {
         return filterConfig;
     }
-    const normalized = { ...filterConfig};
+    const normalized = Object.assign({}, filterConfig);
     ['dislikes', 'likes'].forEach(listKey => {
         const { terms, tids } = splitThreadFilterList(normalized[listKey]);
         normalized[listKey] = joinThreadFilterList(terms, tids);
@@ -4742,7 +4743,7 @@ const DARK_THEME_ROOT_BG = {
 const textEncoder = (function() {
     try {
         return new TextEncoder();
-    } catch  {
+    } catch (e) {
         return null;
     }
 })();
@@ -4758,7 +4759,7 @@ async function getNumMapValue(key) {
                 })
                 .filter(pair => !Number.isNaN(pair[0]));
             return new Map(items);
-        } catch  {}
+        } catch (ex) {}
     }
     return new Map();
 }
@@ -4799,35 +4800,35 @@ function createIdStore(namespace, bucketSize) {
             const localMap = await getNumMapValue(getBucketKey(bucketId));
             const current = localMap.get(localId);
             const newValue = numValue||0;
-            if (current === null || current !== newValue) {
+            if (current == null || current !== newValue) {
                 localMap.set(localId, newValue);
                 await setNumMapValue(getBucketKey(bucketId), localMap.entries());
             }
-            if (current === null) {
+            if (current == null) {
                 await adjustCount(bucketId, 1);
             }
         },
         async setBatch(entries) {
-            if (entries === null || entries.length === 0)
-                {return;}
+            if (entries == null || entries.length === 0)
+                return;
             if (entries.length === 1)
-                {return this.set(entries[0][0], entries[0][1]);}
+                return this.set(entries[0][0], entries[0][1]);
             const buckets = new Map(); // bucketId -> Map<localId, newValue>
-            for (const entry of entries) {
+            for (let entry of entries) {
                 const id = entry[0];
                 if (!Number.isFinite(id))
-                    {continue;}
+                    continue;
                 const bucketId = Math.floor(id / bucketSize);
                 const localId = id % bucketSize;
                 let pending = buckets.get(bucketId);
-                if (pending === null) {
+                if (pending == null) {
                     pending = new Map();
                     buckets.set(bucketId, pending);
                 }
                 pending.set(localId, entry[1]||0);
             }
             if (buckets.size === 0)
-                {return;}
+                return;
             const countAdjustments = new Map(); // bucketId -> number of new ids
             async function applyBucket(bucketId, pending) {
                 const bucketKey = getBucketKey(bucketId);
@@ -4836,10 +4837,10 @@ function createIdStore(namespace, bucketSize) {
                 let added = 0;
                 pending.forEach((newValue, localId) => {
                     const current = localMap.get(localId);
-                    if (current === null) {
+                    if (current == null) {
                         added++;
                     }
-                    if (current === null || current !== newValue) {
+                    if (current == null || current !== newValue) {
                         localMap.set(localId, newValue);
                         changed = true;
                     }
@@ -4868,7 +4869,7 @@ function createIdStore(namespace, bucketSize) {
             const bucketId = Math.floor(id / bucketSize);
             const localId = id % bucketSize;
             const localMap = await getNumMapValue(getBucketKey(bucketId));
-            if (localMap.get(localId) !== null) {
+            if (localMap.get(localId) != null) {
                 localMap.delete(localId);
                 await setNumMapValue(getBucketKey(bucketId), localMap.entries());
                 await adjustCount(bucketId, -1);
@@ -4882,7 +4883,7 @@ function createIdStore(namespace, bucketSize) {
         },
         async getBatch(ids) {
             if (ids.length === 0)
-                {return [];}
+                return [];
             if (ids.length === 1) {
                 const value = await this.get(ids[0]);
                 return [value >= 0 ? value : null];
@@ -4894,7 +4895,7 @@ function createIdStore(namespace, bucketSize) {
                 const localId = id % bucketSize;
                 const entry = [localId, i];
                 let localEntries = buckets.get(bucketId);
-                if (localEntries === null) {
+                if (localEntries == null) {
                     localEntries = [entry];
                     buckets.set(bucketId, localEntries);
                 } else {
@@ -4919,7 +4920,7 @@ function createIdStore(namespace, bucketSize) {
         async size() {
             const bucketSizeMap = await getNumMapValue(indexKey);
             let sum = 0;
-            for (const count of bucketSizeMap.values()) {
+            for (let count of bucketSizeMap.values()) {
                 sum += count;
             }
             return sum;
@@ -4962,13 +4963,13 @@ function createRecordStore(namespace, maxSize) {
                 while (records.length > maxSize) {
                     removedRecords.push(records.pop());
                 }
-                const minValue = records[records.length - 1][1];
+                let minValue = records[records.length - 1][1];
                 records.forEach(record => {
-                    record[1] -= minValue;
+                    record[1] = record[1] - minValue;
                 });
                 records.push([0, minValue]);
                 await setNumMapValue(indexKey, records);
-                for (const removedRecord of removedRecords) {
+                for (let removedRecord of removedRecords) {
                     await GM.deleteValue(getItemKey(removedRecord[0])).catch(ex => null);
                 }
             }
@@ -4976,7 +4977,7 @@ function createRecordStore(namespace, maxSize) {
         },
         async get(id) {
             const value = await GM.getValue(getItemKey(id));
-            return value === null ? null : JSON.parse(value);
+            return value == null ? null : JSON.parse(value);
         },
         async remove(id) {
             await GM.deleteValue(getItemKey(id)).catch(ex => null);
@@ -5026,14 +5027,14 @@ function createThreadHistoryStore(myUserId, userConfig) {
 
 function findMyUserId() {
     const userWrap = document.querySelector('#user_info #showface .user-infoWraptwo');
-    if (userWrap !== null) {
+    if (userWrap != null) {
         const userMatch = userWrap.textContent.match(/\sUID: +(\d+)\s/);
-        if (userMatch !== null) {
+        if (userMatch != null) {
             return userMatch[1] * 1;
         }
     }
     const selfInfo = document.querySelector('#menu_profile .ul2 a[href^="u.php?action-show-uid-"]');
-    if (selfInfo !== null && selfInfo.textContent === '查看个人资料') {
+    if (selfInfo != null && selfInfo.textContent === '查看个人资料') {
         return Number.parseInt(selfInfo.getAttribute('href').substring(22))||null;
     }
     return null;
@@ -5041,37 +5042,37 @@ function findMyUserId() {
 
 function hasMentionedMe(title, myUserId, userConfig) {
     if (title.indexOf('@' + userConfig.myUserHashId) !== -1) // e.g. @a89f389e
-        {return true;}
-    if (new RegExp('(^|[^A-Za-z0-9])' + escapeRegExp(userConfig.myUserHashId) + '([^A-Za-z0-9]|$)').exec(title) !== null) // e.g. a89f389e
-        {return true;}
+        return true;
+    if (new RegExp('(^|[^A-Za-z0-9])' + escapeRegExp(userConfig.myUserHashId) + '([^A-Za-z0-9]|$)').exec(title) != null) // e.g. a89f389e
+        return true;
     
-    if (new RegExp('(^|[^0-9])' + myUserId + '([^0-9]|$)').exec(title) !== null) {
+    if (new RegExp('(^|[^0-9])' + myUserId + '([^0-9]|$)').exec(title) != null) {
         if (title.indexOf('#' + myUserId) !== -1) // e.g. #1234567
-            {return true;}
-        if (title.match(/(^|[^a-z])u?id([^a-z]|$)/i) !== null) // e.g. uid 1234567
-            {return true;}
+            return true;
+        if (title.match(/(^|[^a-z])u?id([^a-z]|$)/i) != null) // e.g. uid 1234567
+            return true;
     }
 
     const nickNameNorm = (userConfig.myNickName||'').trim().replace(/\s+/g, ' ');
     if (nickNameNorm) {
         const titleNorm = title.replace(/\s+/g, ' ');
-        if (new RegExp('@' + escapeRegExp(nickNameNorm)).exec(titleNorm) !== null)
-            {return true;}
-        if (new RegExp('(^|请|给|用户|结算|\\s|，|。|,|:)' + escapeRegExp(nickNameNorm) + '(\\s|大佬|老哥|兄弟|用户|结算|请|，|。|,|$)').exec(titleNorm) !== null)
-            {return true;}
+        if (new RegExp('@' + escapeRegExp(nickNameNorm)).exec(titleNorm) != null)
+            return true;
+        if (new RegExp('(^|请|给|用户|结算|\\s|，|。|,|:)' + escapeRegExp(nickNameNorm) + '(\\s|大佬|老哥|兄弟|用户|结算|请|，|。|,|$)').exec(titleNorm) != null)
+            return true;
     }
 }
 
 function getDefaultRating(postTitle) {
-    const ownBought = postTitle.match(/自购|自購/) !== null;
-    const ownTranslate = postTitle.match(/[个個]人(汉化|漢化|翻译|翻譯)/) !== null;
+    const ownBought = postTitle.match(/自购|自購/) != null;
+    const ownTranslate = postTitle.match(/[个個]人(汉化|漢化|翻译|翻譯)/) != null;
     const sizeMatches = Array.from(postTitle.toUpperCase().replace(/\b(R18G)\b/g, '').matchAll(/(?<![0-9.])((?:\d\d?,?)?\d{1,3}(?:\.\d{1,3})?) *([GMKT](?:I?B)?)(?![A-Z])/g));
 
     // 10M = 1SP
     let baseTotalScore = 0;
     let resourceSizeTotalMB = null;
-    const resourceSizeMBs = [];
-    const resourceSizeTexts = [];
+    let resourceSizeMBs = [];
+    let resourceSizeTexts = [];
     if (sizeMatches.length > 0) {
         resourceSizeTotalMB = 0;
         sizeMatches.forEach(sizeMatch => {
@@ -5120,7 +5121,7 @@ function computeBaseScoreText(resourceSizeMB) {
 
 const PAGE_TITLE_RULES = {
     u_php(queryParams, keyword, myUserId, userConfig, adminRole) {
-        const myself = queryParams.uid === null || queryParams.uid * 1 === myUserId;
+        const myself = queryParams.uid == null || queryParams.uid * 1 === myUserId;
         let suffix = '';
         if (!myself && queryParams.uid) {
             const userId = queryParams.uid * 1;
@@ -5131,8 +5132,8 @@ const PAGE_TITLE_RULES = {
                 suffix += '| #' + queryParams.uid;
             }
         }
-        if (queryParams.action === null) {
-            return queryParams.uid === null || myself ? '我的个人首页' : '个人首页' + suffix;
+        if (queryParams.action == null) {
+            return queryParams.uid == null || myself ? '我的个人首页' : '个人首页' + suffix;
         } else if (queryParams.action === 'feed') {
             return myself ? '我的好友近况' : '好友近况' + suffix;
         } else if (queryParams.action === 'show') {
@@ -5149,14 +5150,14 @@ const PAGE_TITLE_RULES = {
             if (myself) {
                 if (adminRole && queryParams.view === 'admin') {
                     return '我的管理记录';
-                } 
+                } else {
                     return '我的浏览记录';
-                
+                }
             } else if (adminRole) {
                 return '不良记录' + suffix;
-            } 
+            } else {
                 return '商品列表' + suffix;
-            
+            }
         }
     },
     profile_php(queryParams, keyword, myUserId, userConfig) {
@@ -5167,39 +5168,39 @@ const PAGE_TITLE_RULES = {
             const subjectCell = document.querySelector('#info_base .set-table2 > tbody > tr:nth-child(2) > td:nth-child(2)');
             if (subjectCell) {
                 return title + '| ' + subjectCell.textContent;
-            } 
+            } else {
                 return title;
-            
+            }
         }
-        if (queryParams.action === null || queryParams.action === 'receivebox') {
+        if (queryParams.action == null || queryParams.action === 'receivebox') {
             return '📩收件箱';
-        } else if (queryParams.action === 'sendbox') {
+        } else if (queryParams.action == 'sendbox') {
             return '✉️发件箱';
-        } else if (queryParams.action === 'readsnd') {
+        } else if (queryParams.action == 'readsnd') {
             return withSubject('✉️发件箱');
-        } else if (queryParams.action === 'write') {
+        } else if (queryParams.action == 'write') {
             if (queryParams.remid) {
                 return '✉️' + keyword;
-            } 
+            } else {
                 return '✳️发短信';
-            
-        } else if (queryParams.action === 'read') {
+            }
+        } else if (queryParams.action == 'read') {
             return withSubject('📩读短信');
-        } else if (queryParams.action === 'scout') {
+        } else if (queryParams.action == 'scout') {
             return '✉️消息跟踪';
-        } else if (queryParams.action === 'readscout') {
+        } else if (queryParams.action == 'readscout') {
             return withSubject('✉️消息跟踪');
-        } else if (queryParams.action === 'chatlog') {
+        } else if (queryParams.action == 'chatlog') {
             return withSubject('✉️通信记录');
         }
     },
     post_php(queryParams, keyword, myUserId, userConfig) {
-        if (queryParams.action === null) {
+        if (queryParams.action == null) {
             const currentArea = document.querySelector('#breadcrumbs > .crumbs-item.current > strong > a');
             return '✏️发新帖' + (currentArea ? '| ' + currentArea.textContent : '');
-        } else if (queryParams.action === 'modify') {
+        } else if (queryParams.action == 'modify') {
             return '✏️编辑| ' + keyword;
-        } else if (queryParams.action === 'reply') {
+        } else if (queryParams.action == 'reply') {
             return '↩️回帖| ' + keyword;
         }
     },
@@ -5283,7 +5284,7 @@ const PAGE_TITLE_RULES = {
         return '版块管理';
     },
     plugin_php(queryParams, keyword, myUserId, userConfig) {
-        if (queryParams.H_name === 'tasks') {
+        if (queryParams.H_name == 'tasks') {
             switch (queryParams.actions||'') {
                 case '': return '新任务选择| 社区论坛任务';
                 case 'newtasks': return '进行中任务| 社区论坛任务';
@@ -5299,7 +5300,7 @@ const PAGE_TITLE_RULES = {
 function enhancePageTitle(queryParams, myUserId, userConfig, adminRole) {
     const originalTitle = document.title;
     const parts = originalTitle.match(/^(?:(.+) )?([^ -]+\+[^+-]+) - powered by Pu!mdHd$/);
-    if (parts === null) {
+    if (parts == null) {
         return;
     }
     const keyTitle = (parts[1]||'').replace(/ ? - ?$/, '');
@@ -5310,7 +5311,7 @@ function enhancePageTitle(queryParams, myUserId, userConfig, adminRole) {
     if (handler) {
         keyword = handler(queryParams, keyTitle||'', myUserId, userConfig, adminRole);
     }
-    if (keyword === null) {
+    if (keyword == null) {
         keyword = keyTitle||'';
     }
     if (keyword) {
@@ -5331,12 +5332,12 @@ function createPopupMenu(popupId, anchor, rightAligned, verticallyInverted) {
             const left = bounds.x + hShift;
             if (verticallyInverted) {
                 return 'opacity: 0.95; left: ' + left.toFixed(0) + 'px; z-index: 3000; visibility: visible; top: ' + (bounds.top + document.documentElement.scrollTop).toFixed(0) + 'px; transform: translateY(-100%);';
-            } 
+            } else {
                 return 'opacity: 0.95; left: ' + left.toFixed(0) + 'px; z-index: 3000; visibility: visible; top: ' + (bounds.height + bounds.top + document.documentElement.scrollTop).toFixed(0) + 'px;';
-            
-        } 
+            }
+        } else {
             return 'position: fixed; opacity: 0.95; left: calc(50vw - 400px); z-index: 3000; visibility: visible; top: 10vh';
-        
+        }
 
     }
     const menuElem = addElem(document.body, 'div', 'menu rinsp-common-popup-menu', {
@@ -5405,7 +5406,7 @@ async function setupPopupMenu(config) {
             const tdElem = addElem(trElem, 'td', item.cellClass||null);
             const button = addElem(tdElem, 'a', item.class||null);
             button.textContent = item.label;
-            if (item.action === null) {
+            if (item.action == null) {
                 // nothing
             } else if (typeof item.action === 'string') {
                 button.setAttribute('href', item.action);
@@ -5514,7 +5515,7 @@ async function openTextListEditor(popupMenuId, config, callback) {
                 .then(function() {
                     modelMask.remove();
                     closePopupMenu(popupMenuId);
-                    if (callback) {callback();}
+                    if (callback) callback();
                 })
                 .finally(function() {
                     tableElem.classList.remove('rinsp-config-saving');
@@ -5539,16 +5540,18 @@ function initConfigAccess(myUserId, configKey, defaultValue) {
 
 async function readUserConfig(myUserId, configKey, defaultValue) {
     try {
-        const savedData = await GM.getValue(configKey + '#' + myUserId);
-        return { ...defaultValue, ...JSON.parse(savedData)};
-    } catch  {}
-    return { ...defaultValue};
+        let savedData = await GM.getValue(configKey + '#' + myUserId);
+        if (savedData == null) return Object.assign({}, defaultValue);
+        const parsed = typeof savedData === 'string' ? JSON.parse(savedData) : savedData;
+        return Object.assign({}, defaultValue, parsed);
+    } catch (e) {}
+    return Object.assign({}, defaultValue);
 }
 
 async function updateUserConfig(myUserId, updater, configKey, defaultValue) {
-    const oldConfig = await readUserConfig(myUserId, configKey, defaultValue);
-    const newConfig = await updater(oldConfig);
-    if (newConfig !== null) {
+    let oldConfig = await readUserConfig(myUserId, configKey, defaultValue);
+    let newConfig = await updater(oldConfig);
+    if (newConfig != null) {
         await GM.setValue(configKey + '#' + myUserId, JSON.stringify(newConfig));
     }
     return newConfig;
@@ -5579,7 +5582,7 @@ async function recordThreadDeleted(tid, myUserId, threadHistoryAccess) {
 
 async function recordThreadAccess(doc, posts, myUserId, threadHistoryAccess, memoryObj) {
     const currentPostLink = doc.querySelector('#breadcrumbs .crumbs-item.current strong > a[href^="read.php?tid-"]');
-    if (currentPostLink === null) {
+    if (currentPostLink == null) {
         return;
     }
     const areaLink = currentPostLink.closest('.crumbs-item').previousElementSibling;
@@ -5595,13 +5598,13 @@ async function recordThreadAccess(doc, posts, myUserId, threadHistoryAccess, mem
     const lastPost = posts[posts.length - 1];
     const lastFloor = lastPost.floor;
     if (memoryObj.lastFloor !== lastFloor) {
-        if (DEBUG_MODE) {console.info('recordThreadAccess', tid, lastFloor);}
+        if (DEBUG_MODE) console.info('recordThreadAccess', tid, lastFloor);
         await threadHistoryAccess.historyStore.set(tid, lastFloor);
         memoryObj.lastFloor = lastFloor;
     }
 
     const bountyStatus = getBountyStatus(doc);
-    if (memoryObj.lastAccessRecord === null) {
+    if (memoryObj.lastAccessRecord == null) {
         memoryObj.lastAccessRecord = await threadHistoryAccess.recentAccessStore.get(tid);
     }
     function getNewRecord(lastAccessRecord) {
@@ -5612,24 +5615,26 @@ async function recordThreadAccess(doc, posts, myUserId, threadHistoryAccess, mem
                 if (post.floor > lastReplied) {
                     lastReplied = post.floor;
                 }
-            } else if (post.contentElem.querySelector('h6.quote.jumbotron + blockquote.jumbotron') !== null) {
+            } else {
+                if (post.contentElem.querySelector('h6.quote.jumbotron + blockquote.jumbotron') != null) {
                     hasBoughtAny = true;
                 }
+            }
         });
 
         const newRecord = {
             tid, uid, fid, area: areaName, title: threadTitle, time: Date.now(), bought: hasBoughtAny, replied: lastReplied, bounty: bountyStatus
         };
-        if (lastAccessRecord === null) {
+        if (lastAccessRecord == null) {
             return newRecord;
         }
         if ((lastAccessRecord.replied||0) > lastReplied) {
             newRecord.replied = lastAccessRecord.replied;
         }
-        if (bountyStatus === null && lastAccessRecord.bounty !== null) {
+        if (bountyStatus == null && lastAccessRecord.bounty != null) {
             newRecord.bounty = lastAccessRecord.bounty;
         }
-        newRecord.bought ||= !!lastAccessRecord.bought;
+        newRecord.bought = newRecord.bought || !!lastAccessRecord.bought;
         if (!newRecord.uid && lastAccessRecord.uid) {
             newRecord.uid = lastAccessRecord.uid;
         }
@@ -5652,8 +5657,8 @@ async function recordThreadAccess(doc, posts, myUserId, threadHistoryAccess, mem
         if (lastReplied > (lastAccessRecord.replied||0)) {
             savingRecord = newRecord;
         }
-        if (bountyStatus !== null) {
-            if (lastAccessRecord.bounty === null || lastAccessRecord.bounty.ended !== bountyStatus.ended) {
+        if (bountyStatus != null) {
+            if (lastAccessRecord.bounty == null || lastAccessRecord.bounty.ended != bountyStatus.ended) {
                 savingRecord = newRecord;
             }
         }
@@ -5661,20 +5666,20 @@ async function recordThreadAccess(doc, posts, myUserId, threadHistoryAccess, mem
     }
     const newRecord = getNewRecord(memoryObj.lastAccessRecord);
     if (newRecord) {
-        if (DEBUG_MODE) {console.info('recordThreadAccess', tid, newRecord);}
+        if (DEBUG_MODE) console.info('recordThreadAccess', tid, newRecord);
         await threadHistoryAccess.recentAccessStore.put(tid, newRecord);
         memoryObj.lastAccessRecord = newRecord;
     }
 }
 
 function checkManagementRole(myUserId, userConfig, mainConfigAccess) {
-    if (document.querySelector('#guide > li > a[data-pw-admin-entry]') !== null) {
+    if (document.querySelector('#guide > li > a[data-pw-admin-entry]') != null) {
         return true;
     }
     let hasManageRole = false;
     const userNavTopicLink = document.querySelector('#user_info .fl > .link5[href="u.php?action-topic.html"]');
     if (userNavTopicLink) {
-        const rank = (userNavTopicLink.parentElement.textContent.match(/等级:([^,]+),/)||[])[1];
+        let rank = (userNavTopicLink.parentElement.textContent.match(/等级:([^,]+),/)||[])[1];
         hasManageRole = ['管理员', '总版主', '论坛版主'].includes(rank);
         if (hasManageRole !== userConfig.hasSeenAdminRole) {
             userConfig.hasSeenAdminRole = hasManageRole;
@@ -5695,7 +5700,7 @@ function showNativeWarningPopup(msg) {
         unsafeWindow.ajax.request = unsafeWindow.Object();
         unsafeWindow.ajax.request.responseText = msg;
         unsafeWindow.ajax.guide();
-    } catch  {
+    } catch (ignore) {
         alert(msg);
     }
 }
@@ -5704,12 +5709,12 @@ function showNativeSpinner(anchor) {
     try {
         unsafeWindow.read.obj = anchor;
         unsafeWindow.read.guide();
-    } catch  {}
+    } catch (ignore) {}
 }
 function closeNativeSpinner() {
     try {
         unsafeWindow.closep();
-    } catch  {}
+    } catch (ignore) {}
 }
 
 function addFloatingFavorButton(topControlContainer, tid, favorThreadsCacheAccess) {
@@ -5745,7 +5750,7 @@ function addFloatingFavorButton(topControlContainer, tid, favorThreadsCacheAcces
                 closeNativeSpinner();
                 return;
             }
-            if (favId === null) {
+            if (favId == null) {
                 storeButton.dataset.favId = 0;
                 storeButton.classList.remove('rinsp-active');
                 closeNativeSpinner();
@@ -5762,7 +5767,7 @@ function addFloatingFavorButton(topControlContainer, tid, favorThreadsCacheAcces
                     body: postData
                 })
                 .then(resp => {
-                    if (!resp.ok) {throw Error();}
+                    if (!resp.ok) throw Error();
                 })
                 .then(() => {
                     storeButton.dataset.favId = 0;
@@ -5785,9 +5790,9 @@ function addFloatingFavorButton(topControlContainer, tid, favorThreadsCacheAcces
                                 }
                                 cache.data[tid] = { tid: tid };
                                 return cache;
-                            } 
+                            } else {
                                 return { data: {}, time: 0 };
-                            
+                            }
                         });
                     } else {
                         throw msg;
@@ -5838,9 +5843,9 @@ function readCurrentAndMaxPage(doc) {
     let currentPage = 1;
     let maxPage = 1;
     const pagesElem = doc.querySelector('.pages li.pagesone');
-    if (pagesElem !== null) {
-        const match = pagesElem.textContent.replace(/\u00a0/g, ' ').match(/Pages: *(\d+)[^/]*\/ *(\d+) */);
-        if (match !== null) {
+    if (pagesElem != null) {
+        let match = pagesElem.textContent.replace(/\u00a0/g, ' ').match(/Pages: *(\d+)[^\/]*\/ *(\d+) */);
+        if (match != null) {
             currentPage = Number.parseInt(match[1]);
             maxPage = Number.parseInt(match[2]);
         }
@@ -5864,7 +5869,7 @@ function isCurrentThreadMatchingFid(fid) {
 function rafThrottle(fn) {
     let handle = null;
     const throttled = function() {
-        if (handle !== null) {
+        if (handle != null) {
             return;
         }
         handle = requestAnimationFrame(() => {
@@ -5873,7 +5878,7 @@ function rafThrottle(fn) {
         });
     };
     throttled.cancel = function() {
-        if (handle !== null) {
+        if (handle != null) {
             cancelAnimationFrame(handle);
             handle = null;
         }
@@ -5899,7 +5904,7 @@ function addBackToTopButton(container) {
 
 async function addSearchBar(queryParams, searchConfigAccess, userConfig) {
     const guide = document.querySelector('#guide');
-    if (guide === null) {
+    if (guide == null) {
         return;
     }
     const searchPref = await searchConfigAccess.read();
@@ -5927,7 +5932,7 @@ async function addSearchBar(queryParams, searchConfigAccess, userConfig) {
     if (userConfig.showSearchBar$align === 'menu-first') {
         guide.insertBefore(quicksearchForm, guide.firstChild);
     } else if (userConfig.showSearchBar$align === 'bar-center') {
-        const gap = guide.getBoundingClientRect().width - 250;
+        let gap = guide.getBoundingClientRect().width - 250;
         guide.classList.add('rinsp-quicksearch-align-center');
         guide.insertBefore(newElem('li', 'rinsp-spacer'), guide.firstChild);
         guide.insertBefore(quicksearchForm, guide.firstChild);
@@ -5958,7 +5963,6 @@ async function addSearchBar(queryParams, searchConfigAccess, userConfig) {
         if (keyword.length === 0) {
             return false;
         }
-        // eslint-disable-next-line no-control-regex
         if (keyword.match(/^[\x00-\x7F]+$/)) {
             switch (keyword.replace(/\s/g, '').length) {
             case 0:
@@ -5993,13 +5997,13 @@ async function init() {
 
     // start main script
     const myUserId = findMyUserId();
-    if (myUserId === null) {
-        if (DEV_MODE) {console.info('(sp-watcher) cannot find user id');}
+    if (myUserId == null) {
+        if (DEV_MODE) console.info('(sp-watcher) cannot find user id');
         return;
     }
 
     let domainRedirectTarget = await getDomainRedirectTarget();
-    if (domainRedirectTarget !== null && domainRedirectTarget !== document.location.origin) {
+    if (domainRedirectTarget != null && domainRedirectTarget !== document.location.origin) {
         setDomainRedirectEnabled(true); // update target domain
         domainRedirectTarget = document.location.origin;
     }
@@ -6019,7 +6023,7 @@ async function init() {
             async update(updater) {
                 return await access.update(async function(filterConfig) {
                     const updated = await updater(normalizeThreadFilterConfig(filterConfig));
-                    return updated === null ? null : normalizeThreadFilterConfig(updated);
+                    return updated == null ? null : normalizeThreadFilterConfig(updated);
                 });
             }
         };
@@ -6033,7 +6037,7 @@ async function init() {
     let userConfig = await mainConfigAccess.read();
     let autoWatchEnabled = DEV_MODE && !!userConfig.autoWatchOnReply;
     if (!userConfig.v15migrationApplied) {
-        const migratedUserConfig = await mainConfigAccess.update(function(updatingUserConfig) {
+        let migratedUserConfig = await mainConfigAccess.update(function(updatingUserConfig) {
             if (updatingUserConfig.v15migrationApplied) {
                 return null;
             }
@@ -6050,18 +6054,18 @@ async function init() {
                         spuUserIds.delete('#' + entry[1][0]);
                     }
                 });
-            for (const spuUserId of spuUserIds) {
+            for (let spuUserId of spuUserIds) {
                 delete updatingUserConfig.customUserHashIdMappings[spuUserId];
             }
             updatingUserConfig.v15migrationApplied = true;
             return updatingUserConfig;
         });
-        if (migratedUserConfig !== null) {
+        if (migratedUserConfig != null) {
             userConfig = migratedUserConfig;
         }
     }
     if (!userConfig.v42migrationApplied) {
-        const migratedUserConfig = await mainConfigAccess.update(function(updatingUserConfig) {
+        let migratedUserConfig = await mainConfigAccess.update(function(updatingUserConfig) {
             if (updatingUserConfig.v42migrationApplied) {
                 return null;
             }
@@ -6073,7 +6077,7 @@ async function init() {
                         if (typeof userHashId === 'object' && typeof userHashId.hashId === 'string') {
                             userHashId = userHashId.hashId;
                         }
-                        const newRecord = [entry[1][0] * 1, userHashId, entry[1][2]];
+                        let newRecord = [entry[1][0] * 1, userHashId, entry[1][2]];
                         newMappings['#' + newRecord[0]] = newRecord;
                         newMappings['@' + newRecord[1]] = newRecord;
                     }
@@ -6082,7 +6086,7 @@ async function init() {
             updatingUserConfig.v42migrationApplied = true;
             return updatingUserConfig;
         });
-        if (migratedUserConfig !== null) {
+        if (migratedUserConfig != null) {
             userConfig = migratedUserConfig;
         }
     }
@@ -6100,19 +6104,19 @@ async function init() {
     let showResourceSpots = null;
     Object.keys(DEFAULT_MAIN_CONFIG).filter(k => k.startsWith('showResourceSpots$')).forEach(k => {
         if (userConfig[k]) {
-            showResourceSpots ||= {};
+            showResourceSpots = showResourceSpots || {};
             showResourceSpots[k.substring(18)] = true;
         }
     });
 
     // 所在地是免空区
-    const inResourceArea = document.querySelector('#breadcrumbs .crumbs-item[href="thread.php?fid-13.html"] + .crumbs-item') !== null;
+    const inResourceArea = document.querySelector('#breadcrumbs .crumbs-item[href="thread.php?fid-13.html"] + .crumbs-item') != null;
 
     // 所在地是事务受理
-    const inOfficeArea = document.querySelector('#breadcrumbs .crumbs-item[href="thread.php?fid-2.html"] + .crumbs-item') !== null;
+    const inOfficeArea = document.querySelector('#breadcrumbs .crumbs-item[href="thread.php?fid-2.html"] + .crumbs-item') != null;
 
     // 所在地是网赚区
-    const inPaywallArea = document.querySelector('#breadcrumbs .crumbs-item[href="thread.php?fid-170.html"] + .crumbs-item') !== null;
+    const inPaywallArea = document.querySelector('#breadcrumbs .crumbs-item[href="thread.php?fid-170.html"] + .crumbs-item') != null;
     const hasManagementRole = checkManagementRole(myUserId, userConfig, mainConfigAccess);
 
     const pendingWatchItemChecks = new Set();
@@ -6184,7 +6188,7 @@ async function init() {
         const togglerElem = addElem(extraControlContainer, 'a', 'rinsp-excontrol-item rinsp-excontrol-item-hidden');
         togglerElem.classList.add(togglerClass);
         togglerElem.addEventListener('click', function() {
-            const newValue = !isActive();
+            let newValue = !isActive();
             setActive(newValue);
             if (newValue) {
                 localStorage.setItem(lastStateKey, '1');
@@ -6305,8 +6309,9 @@ async function init() {
             historyLink.textContent = '浏览记录';
         }
     }
+    let scoringModeToggler = null;
     if (hasManagementRole && inResourceArea) {
-        const scoringModeToggler = addIgnoreToggler('rinsp-highlight-unscored-thread-toggler', 'rinsp-highlight-unscored-thread-mode');
+        scoringModeToggler = addIgnoreToggler('rinsp-highlight-unscored-thread-toggler', 'rinsp-highlight-unscored-thread-mode');
         scoringModeToggler.setCount('+');
         scoringModeToggler.restoreLastState();
     }
@@ -6321,18 +6326,18 @@ async function init() {
         });
     }
 
-    const hideClosedThreadToggler = addIgnoreToggler('rinsp-closed-thread-toggler', 'rinsp-closed-thread-view-mode', 'rinsp-closed-thread-mask-mode');
+    let hideClosedThreadToggler = addIgnoreToggler('rinsp-closed-thread-toggler', 'rinsp-closed-thread-view-mode', 'rinsp-closed-thread-mask-mode');
     hideClosedThreadToggler.restoreLastState(true);
 
     // auto-discover nick name the first time
-    if (userConfig.myNickName === null) {
+    if (userConfig.myNickName == null) {
         let nickName = null;
         try {
             const doc = await fetchGetPage(`${document.location.origin}/u.php?action-show-uid-${myUserId}.html`, null, true);
-            if (doc.querySelector('#u-profile') !== null) {
+            if (doc.querySelector('#u-profile') != null) {
                 nickName = '';
             }
-            for (const td of doc.querySelectorAll('#u-profile .u-table > tbody > tr > td')) {
+            for (let td of doc.querySelectorAll('#u-profile .u-table > tbody > tr > td')) {
                 if (td.textContent.trim() === '昵称') {
                     nickName = td.parentNode.querySelector('th').textContent.trim();
                     break;
@@ -6341,7 +6346,7 @@ async function init() {
         } catch (ex) {
             console.error(ex);
         }
-        if (nickName !== null) {
+        if (nickName != null) {
             userConfig = await mainConfigAccess.update(function(updatingUserConfig) {
                 updatingUserConfig.myNickName = nickName;
                 return updatingUserConfig;
@@ -6434,13 +6439,13 @@ async function init() {
         addSearchBar(queryParams, searchConfigAccess, userConfig);
     }
 
-    const action = queryParams.action||'';
+    let action = queryParams.action||'';
     if (document.location.pathname === '/' || document.location.pathname === '/index.php') {
         enhanceFrontPage(userConfig, mainConfigAccess);
     }
 
     if (document.location.pathname === '/u.php') {
-        if (document.location.search === '' || queryParams.action === null && queryParams.uid * 1 === myUserId) {
+        if (document.location.search === '' || queryParams.action == null && queryParams.uid * 1 === myUserId) {
             document.body.classList.add('rinsp-uphp-self');
             await initConfigPanel();
             rewriteUserRecentPostLinks(userConfig, userPinArea);
@@ -6492,9 +6497,11 @@ async function init() {
         if (action) {
             document.body.classList.add('rinsp-uphp-' + action);
         }
-    } else if (userConfig.myUserHashId === null) {
+    } else {
+        if (userConfig.myUserHashId == null) {
             document.location.href = '/u.php';
         }
+    }
     
     if (document.location.pathname === '/message.php') {
         if (action === '' || action === 'receivebox') {
@@ -6540,7 +6547,7 @@ async function init() {
         if (autoWatchEnabled && (queryParams.action === 'reply' || queryParams.action === 'quote') && queryParams.tid) {
             const replyTid = Number.parseInt(queryParams.tid);
             const postForm = document.FORM;
-            if (!Number.isNaN(replyTid) && postForm !== null && postForm.getAttribute('action') === 'post.php?') {
+            if (!Number.isNaN(replyTid) && postForm != null && postForm.getAttribute('action') === 'post.php?') {
                 postForm.addEventListener('submit', () => setAutoWatchPendingMarker(myUserId, replyTid));
             }
         }
@@ -6560,7 +6567,7 @@ async function init() {
     }
 
     if (userConfig.enhancePageTitle) {
-        enhancePageTitle(queryParams, myUserId, userConfig, adminFunctions !== null);
+        enhancePageTitle(queryParams, myUserId, userConfig, adminFunctions != null);
     }
 
     if (adminFunctions) {
@@ -6675,14 +6682,14 @@ async function init() {
             }
         }
 
-        if (userInfoPopup === null) {
+        if (userInfoPopup == null) {
             // The popup is a direct child of <body>
             const observer = new MutationObserver((mutations) => {
                 if (!mutations.some(m => m.addedNodes.length > 0)) {
                     return;
                 }
                 userInfoPopup = document.querySelector('body > .user-info');
-                if (userInfoPopup !== null) {
+                if (userInfoPopup != null) {
                     observer.disconnect();
                     observer.takeRecords();
                     bindUpdate();
@@ -6706,12 +6713,12 @@ async function init() {
         if (enclosingPost) {
             enclosingPost.focus();
         }
-        if (document.querySelector('.rinsp-dialog-modal-mask') !== null) {
+        if (document.querySelector('.rinsp-dialog-modal-mask') != null) {
             return;
         }
         const withinMenu = e.target.closest('.rinsp-common-popup-menu');
         let withinMenuId = '-n/a-';
-        if (withinMenu !== null) {
+        if (withinMenu != null) {
             withinMenuId = withinMenu.getAttribute('id');
         }
         document.querySelectorAll('.rinsp-common-popup-menu').forEach(function(menu) {
@@ -6741,14 +6748,14 @@ async function init() {
                 // Write phase 1: only the post that was sticky last time needs resetting.
                 // Doing this before any reads keeps the measurements below in the static state
                 // and costs at most one reflow.
-                if (lastStickyPost !== null) {
+                if (lastStickyPost != null) {
                     resetPost(lastStickyPost);
                     lastStickyPost = null;
                 }
                 // Read phase: find the first post that spans the top of the viewport.
                 let activePost = null;
                 let activeRect = null;
-                for (const post of posts) {
+                for (let post of posts) {
                     const postRect = post.rootElem.getBoundingClientRect();
                     if (postRect.top < 0 && postRect.top + postRect.height > 0) {
                         activePost = post;
@@ -6756,7 +6763,7 @@ async function init() {
                         break;
                     }
                 }
-                if (activePost === null) {
+                if (activePost == null) {
                     return;
                 }
                 const visibleHeight = activeRect.top + activeRect.height;
@@ -6782,8 +6789,8 @@ async function init() {
                 }
             },
             scheduleUpdate() {
-                if (schedule !== null)
-                    {return;}
+                if (schedule != null)
+                    return;
                 schedule = requestAnimationFrame(() => {
                     schedule = null;
                     this.update();
@@ -6798,7 +6805,7 @@ async function init() {
     }
 
     let forceCleanUpdate = false;
-    const enhancementMemoryObj = {};
+    let enhancementMemoryObj = {};
     let postEnhancementActions = [];
     let lastCacheKey = null;
     let lastPreCheckKey = null;
@@ -6821,7 +6828,7 @@ async function init() {
     }
 
     async function applyEnhancementPass(firstTime, forceClean) {
-        if (DEBUG_MODE) {console.info('applyEnhancement');}
+        if (DEBUG_MODE) console.info('applyEnhancement');
 
         function disableSystemPostCollapse(post) {
             if (userConfig.disablePostCollapse) {
@@ -6860,13 +6867,13 @@ async function init() {
         function onConfigUpdate(updatedConfigs) {
             forceCleanUpdate = true;
             if (updatedConfigs) {
-                if (updatedConfigs.threadFilter !== null) {
+                if (updatedConfigs.threadFilter != null) {
                     threadFilter = updatedConfigs.threadFilter;
                 }
-                if (updatedConfigs.userFilter !== null) {
+                if (updatedConfigs.userFilter != null) {
                     userFilter = updatedConfigs.userFilter;
                 }
-                if (updatedConfigs.ignoreList !== null) {
+                if (updatedConfigs.ignoreList != null) {
                     ignoreList = updatedConfigs.ignoreList;
                 }
             }
@@ -6940,7 +6947,7 @@ async function init() {
                             // userPinArea
 
                             const fullName = userConfig.customUserHashIdMappings['@' + uhash];
-                            if (fullName !== null) {
+                            if (fullName != null) {
                                 (replace = newElem('span', 'rinsp-nickname-byother')).textContent = fullName[2];
                             }
                         }
@@ -7031,7 +7038,7 @@ async function init() {
             // if unchanged since the last full parse, and no forced update is pending, nothing below could produce a different cacheKey.
             const preCheckKey = 'posts:' + document.querySelectorAll('th.r_one[id^=td_] .tpc_content > div[id^="read_"]').length;
             if (!forceClean && preCheckKey === lastPreCheckKey) {
-                if (DEBUG_MODE) {console.info('skipped update (pre-check)', preCheckKey);}
+                if (DEBUG_MODE) console.info('skipped update (pre-check)', preCheckKey);
             } else {
                 lastPreCheckKey = preCheckKey;
                 const posts = getPosts(document);
@@ -7042,7 +7049,7 @@ async function init() {
                         const userMap = readEnhanceUserInfoMap(myUserId, userConfig);
                         const myself = userMap.get(myUserId);
                         if (myself) { // auto update my nick name if changed
-                            if (userConfig.myNickName === null || myself.nickName !== userConfig.myNickName) {
+                            if (userConfig.myNickName == null || myself.nickName !== userConfig.myNickName) {
                                 userConfig = await mainConfigAccess.update(function(updatingUserConfig) {
                                     updatingUserConfig.myNickName = myself.nickName;
                                     return updatingUserConfig;
@@ -7077,17 +7084,19 @@ async function init() {
                             }
                         }
                     }
-                } else if (DEBUG_MODE) {console.info('skipped update', cacheKey);}
+                } else {
+                    if (DEBUG_MODE) console.info('skipped update', cacheKey);
+                }
             }
         } else {
             // cheap pre-check before the full getThreadList() parse; see getThreadListPreCheckKey() for the invariants it relies on.
             const preCheckKey = getThreadListPreCheckKey();
-            if (!forceClean && preCheckKey !== null && preCheckKey === lastPreCheckKey) {
-                if (DEBUG_MODE) {console.info('skipped update (pre-check)', preCheckKey);}
+            if (!forceClean && preCheckKey != null && preCheckKey === lastPreCheckKey) {
+                if (DEBUG_MODE) console.info('skipped update (pre-check)', preCheckKey);
             } else {
                 lastPreCheckKey = preCheckKey;
                 const threadList = getThreadList();
-                if (threadList === null) {
+                if (threadList == null) {
                     lastCacheKey = null;
                     lastPreCheckKey = null;
                 } else {
@@ -7127,7 +7136,9 @@ async function init() {
                             }
                         }
                         await applyThreadListEnhancement(myUserId, userConfig, threadList, threadFilter, userFilter, userPinArea, shareTypeFilter, settlementPostMatcher, threadHistoryAccess, threadTitleFilter_onConfigUpdate, forceClean);
-                    } else if (DEBUG_MODE) {console.info('skipped update', cacheKey);}
+                    } else {
+                        if (DEBUG_MODE) console.info('skipped update', cacheKey);
+                    }
                 }
             }
         }
@@ -7149,9 +7160,9 @@ async function init() {
             case '/search.php':
                 if (document.querySelector('form[action="search.php?"]')) {
                     return null;
-                } 
+                } else {
                     return readSearchThreadList();
-                
+                }
             default:
                 return null;
         }
@@ -7169,9 +7180,9 @@ async function init() {
             case '/search.php':
                 if (document.querySelector('form[action="search.php?"]')) {
                     return null;
-                } 
+                } else {
                     return 'threads:' + document.querySelectorAll('table > tbody > tr.tr3.tac > th > a[href^="read.php?tid-"]').length;
-                
+                }
             default:
                 return null;
         }
@@ -7190,12 +7201,13 @@ async function init() {
 
     observer.init(document.getElementById('main'), { childList: true, subtree: true, attributes: false });
 
+    let hiddenStateChangeObserver = null;
     const postListForm = document.querySelector('#main > form[name="delatc"]');
     if (postListForm) {
         let lastHiddenPostCount = 0;
-        const hiddenStateChangeObserver = createMutationObserver(async () => {
+        hiddenStateChangeObserver = createMutationObserver(async () => {
             const hiddenPostCount = document.querySelectorAll('.t5.t2[hidden]').length;
-            if (hiddenPostCount !== lastHiddenPostCount) {
+            if (hiddenPostCount != lastHiddenPostCount) {
                 forceCleanUpdate = true;
                 lastHiddenPostCount = hiddenPostCount;
                 observer.trigger();
@@ -7215,11 +7227,11 @@ async function init() {
         });
     }
 
-    if (DEV_MODE) {console.info('(sp-watcher) loaded');}
+    if (DEV_MODE) console.info('(sp-watcher) loaded');
 
     function getUserProfileHashId() {
         const elem = document.querySelector('#main #u-wrap #u-content #u-top h1');
-        if (elem !== null) {
+        if (elem != null) {
             const userHashId = elem.textContent.trim();
             if (userHashId.match(/[0-9a-f]{8}/)) {
                 return userHashId;
@@ -7260,7 +7272,7 @@ async function init() {
         let nickName = null;
         let uidCell = null;
         if (action === 'show') {
-            for (const td of document.querySelectorAll('#u-profile table > tbody > tr > td')) {
+            for (let td of document.querySelectorAll('#u-profile table > tbody > tr > td')) {
                 if (td.textContent === 'UID') {
                     uidCell = td.nextElementSibling;
                     if (!userId) {
@@ -7274,10 +7286,10 @@ async function init() {
             }
         }
         const userHashId = getUserProfileHashId();
-        if (!(userId > 0) && userHashId !== null && userHashId === userConfig.myUserHashId) {
+        if (!(userId > 0) && userHashId != null && userHashId === userConfig.myUserHashId) {
             userId = myUserId;
         }
-        if (userHashId !== null && userId > 0) {
+        if (userHashId != null && userId > 0) {
             if (uidCell) {
                 const pinOper = addElem(uidCell, 'div', 'rinsp-user-action-pinuser-button');
                 const update = () => {
@@ -7319,7 +7331,7 @@ async function init() {
                 }
             }
     
-            const customNameEntry = userConfig.customUserHashIdMappings['@' + userHashId];
+            let customNameEntry = userConfig.customUserHashIdMappings['@' + userHashId];
             const parentElem = document.querySelector('#main #u-wrap #u-content #u-top h1');
             const button = addElem(parentElem, 'span', 'rinsp-user-map-icon');
             if (customNameEntry) {
@@ -7330,7 +7342,7 @@ async function init() {
                 button.classList.add('rinsp-config-saving');
                 changeCustomUserMapping(userId, userHashId, customNameEntry&&customNameEntry[2]||nickName||'')
                     .then(function(newName) {
-                        if (newName === null) {
+                        if (newName == null) {
                             return;
                         }
                         if (newName) {
@@ -7351,7 +7363,7 @@ async function init() {
 
     async function changeCustomUserMapping(userId, userHashId, nickName, bypassPrompt) {
         let chosenNickName = bypassPrompt ? nickName : prompt('记住昵称 - 输入空白以撤销记录', nickName);
-        if (chosenNickName === null) { // cancelled
+        if (chosenNickName == null) { // cancelled
             return null;
         }
         chosenNickName = chosenNickName.trim();
@@ -7366,11 +7378,11 @@ async function init() {
                 updatingUserConfig.customUserHashIdMappings['#' + userId] = newMetadata;
                 updatingUserConfig.customUserHashIdMappings['@' + userHashId] = newMetadata;
                 return updatingUserConfig;
-            } 
+            } else {
                 delete updatingUserConfig.customUserHashIdMappings['#' + currentMetadata[0]];
                 delete updatingUserConfig.customUserHashIdMappings['@' + userHashId];
                 return updatingUserConfig;
-            
+            }
         });
         return chosenNickName;
     }
@@ -7381,7 +7393,7 @@ async function init() {
         function generateAction(task, confirmMessage, successMessage) {
             return async () => {
                 if (!confirm('请确认 ' + confirmMessage))
-                    {return;}
+                    return;
                 const action = async () => {
                     await task();
                     return '✔️' + successMessage;
@@ -7417,9 +7429,9 @@ async function init() {
     }
 
     async function initConfigPanel() {
-        if (userConfig.myUserHashId === null) {
+        if (userConfig.myUserHashId == null) {
             const userHashId = getUserProfileHashId();
-            if (userHashId !== null) {
+            if (userHashId != null) {
                 userConfig = await mainConfigAccess.update(function(freshUserConfig) {
                     freshUserConfig.myUserHashId = userHashId;
                     return freshUserConfig;
@@ -7458,7 +7470,7 @@ async function init() {
 
         addElem(configList, 'dt', 'rinsp-config-item-sep rinsp-config-item-lv1').textContent = '绑域名设置 (只同域名内适用)';
         putCheckBoxItem('暗黑模式', {
-            get: () => darkModeEnabledProperty.get() !== null,
+            get: () => darkModeEnabledProperty.get() != null,
             async update(enabled) {
                 darkModeEnabledProperty.set(enabled ? '1' : null);
                 applyDarkTheme();
@@ -7517,7 +7529,7 @@ async function init() {
             });
         }
         putCheckBoxItem('自动域名跳转', {
-            get: () => domainRedirectTarget !== null,
+            get: () => domainRedirectTarget != null,
             update: async (enabled) => setDomainRedirectEnabled(enabled)
         });
         putCheckBoxItem('更有意义网页标题', 'enhancePageTitle');
@@ -7531,7 +7543,7 @@ async function init() {
         addElem(searchBarAlignSelect, 'option', null, { value: 'menu-first' }).textContent = '主菜单 右边第一项';
         addElem(searchBarAlignSelect, 'option', null, { value: 'bar-center' }).textContent = '主菜单 空间置中';
         searchBarAlignSelect.value = userConfig.showSearchBar$align;
-        searchBarAlignSelect.value ||= 'default';
+        searchBarAlignSelect.value = searchBarAlignSelect.value || 'default';
         searchBarAlignSelect.addEventListener('change', () => {
             configPanel.classList.add('rinsp-config-saving');
             mainConfigAccess.update(function(updatingUserConfig) {
@@ -7554,7 +7566,7 @@ async function init() {
         addElem(fontSizeSelect, 'option', null, { value: '2' }).textContent = '列表标题及内容大小 +1';
         addElem(fontSizeSelect, 'option', null, { value: '3' }).textContent = '列表标题及内容大小 +2';
         fontSizeSelect.value = userConfig.textSize;
-        fontSizeSelect.value ||= '0';
+        fontSizeSelect.value = fontSizeSelect.value || '0';
         fontSizeSelect.addEventListener('change', () => {
             configPanel.classList.add('rinsp-config-saving');
             mainConfigAccess.update(function(updatingUserConfig) {
@@ -7574,7 +7586,7 @@ async function init() {
         addElem(floatShortcutSelect, 'option', null, { value: 'tr' }).textContent = '右上角';
         addElem(floatShortcutSelect, 'option', null, { value: 'tl' }).textContent = '左上角';
         floatShortcutSelect.value = userConfig.floatingShortcut;
-        floatShortcutSelect.value ||= 'tr';
+        floatShortcutSelect.value = floatShortcutSelect.value || 'tr';
         floatShortcutSelect.addEventListener('change', () => {
             configPanel.classList.add('rinsp-config-saving');
             mainConfigAccess.update(function(updatingUserConfig) {
@@ -7697,12 +7709,12 @@ async function init() {
 
         async function updateHistoryCount() {
             // the history store is built once in init(), so toggling only takes effect after a reload
-            if (historyEnabledCheckbox.checked !== (threadHistoryAccess !== null)) {
+            if (historyEnabledCheckbox.checked !== (threadHistoryAccess != null)) {
                 historySummaryItem.textContent = '💡 刷新页面后生效';
                 historyActionItem.style.display = 'none';
                 return;
             }
-            if (threadHistoryAccess === null) {
+            if (threadHistoryAccess == null) {
                 historySummaryItem.textContent = '💡 记录功能未启用';
                 historyActionItem.style.display = 'none';
                 return;
@@ -7768,7 +7780,7 @@ async function init() {
 
         renderPinnedUsers();
 
-        const userFilterConfig = await userFilterConfigAccess.read();
+        let userFilterConfig = await userFilterConfigAccess.read();
         renderUserBlacklist('屏蔽用户列表 - 屏蔽所有内容', entry => entry[1].hideReplies);
         renderUserBlacklist('屏蔽用户列表 - 只屏蔽主题帖', entry => entry[1].hideThreads && !entry[1].hideReplies);
 
@@ -7784,7 +7796,7 @@ async function init() {
             addElem(sortOrderSelect, 'option', null, { value: 'uid' }).textContent = 'UID';
             addElem(sortOrderSelect, 'option', null, { value: 'nickname' }).textContent = '昵称';
             sortOrderSelect.value = userConfig.customUserOrderBy;
-            sortOrderSelect.value ||= 'uid';
+            sortOrderSelect.value = sortOrderSelect.value || 'uid';
             sortOrderSelect.addEventListener('change', () => {
                 configPanel.classList.add('rinsp-config-saving');
                 mainConfigAccess.update(function(updatingUserConfig) {
@@ -7849,7 +7861,7 @@ async function init() {
             const showActiveRepliersControl = putCheckBoxItem('自动显示当前页活跃回复者', 'showActiveRepliers');
             const showActiveRepliersMinControl = addElem(showActiveRepliersControl, 'a', null, { href: 'javascript:' });
             showActiveRepliersMinControl.addEventListener('click', async () => {
-                const minCount = prompt('最低回复次数', '') * 1;
+                let minCount = prompt('最低回复次数', '') * 1;
                 if (minCount > 1) {
                     configPanel.classList.add('rinsp-config-saving');
                     mainConfigAccess.update(function(updatingUserConfig) {
@@ -8015,7 +8027,7 @@ async function init() {
             const href = el.getAttribute('href');
             const tid = (href.match(/\/read.php\?tid-(\d+)\.html$/)||[])[1];
             if (tid) {
-                el.setAttribute('href', `/read.php?tid-${tid}.html`);
+                el.setAttribute('href', `/read.php\?tid-${tid}.html`);
             }
         });
     }
@@ -8164,17 +8176,17 @@ async function init() {
             await runGMBatch(addedKeys, key => GM.deleteValue(key).catch(ex2 => null));
             const restoreEntries = Array.from(backup.entries()).filter(entry => entry[1] !== undefined);
             await runGMBatch(restoreEntries, entry => GM.setValue(entry[0], entry[1]).catch(ex2 => null));
-            throw new Error('导入失败，已还原原有设置: ' + ex, { cause: ex });
+            throw new Error('导入失败，已还原原有设置: ' + ex);
         }
     }
 
     async function mergeUserData(userId, userData) {
-        const currentUserData = await exportUserSettings(userId);
+        let currentUserData = await exportUserSettings(userId);
 
         // a single corrupt stored value should skip that record, not abort the whole merge
         function tryParseJson(key, value, fallback) {
-            if (value === null || value === undefined || value === '') {return fallback;}
-            if (typeof value !== 'string') {return value;} // already an object (GM can store non-strings)
+            if (value == null || value === undefined || value === '') return fallback;
+            if (typeof value !== 'string') return value; // already an object (GM can store non-strings)
             try {
                 return JSON.parse(value);
             } catch (ex) {
@@ -8192,7 +8204,7 @@ async function init() {
                     return this;
                 },
                 mergeKeyValueEntry(key) {
-                    newData[key] = { ...baseData[key]||{}, ...newData[key]||{}};
+                    newData[key] = Object.assign({}, baseData[key]||{}, newData[key]||{});
                     return this;
                 },
                 getBaseData() {
@@ -8206,7 +8218,7 @@ async function init() {
                 }
             };
         }
-        const newUserData = { ...userData};
+        const newUserData = Object.assign({}, userData);
 
         merger(MAIN_CONFIG_KEY)
             .mergeKeyValueEntry('customUserHashIdMappings')
@@ -8244,7 +8256,7 @@ async function init() {
             .replacing(newUserData);
 
         const my_watchlist_merger = merger('my_watchlist');
-        newUserData.my_watchlist = JSON.stringify({ ...my_watchlist_merger.getBaseData(), ...my_watchlist_merger.getData()});
+        newUserData['my_watchlist'] = JSON.stringify(Object.assign({}, my_watchlist_merger.getBaseData(), my_watchlist_merger.getData()));
         
         const tid_visit_history$map = new Map();
         Object.keys(userData).filter(key => key.startsWith('tid_visit_history:#')).forEach(key => {
@@ -8284,14 +8296,14 @@ async function init() {
         const tid_recent$map = new Map();
         Object.keys(userData).filter(key => key.startsWith('tid_recent:#')).forEach(key => {
             const record = tryParseJson(key, userData[key], null);
-            if (record === null || !(record.tid > 0)) {return;}
+            if (record == null || !(record.tid > 0)) return;
             tid_recent$map.set(record.tid, record);
         });
         Object.keys(currentUserData).filter(key => key.startsWith('tid_recent:#')).forEach(key => {
             const record = tryParseJson(key, currentUserData[key], null);
-            if (record === null || !(record.tid > 0)) {return;}
+            if (record == null || !(record.tid > 0)) return;
             const dup = tid_recent$map.get(record.tid);
-            if (dup === null || record.time > dup.time) {
+            if (dup == null || record.time > dup.time) {
                 tid_recent$map.set(record.tid, record);
             }
         });
@@ -8301,7 +8313,7 @@ async function init() {
         if (tid_recent$list.length > 0) {
             let minTime = (tid_recent$list[0]||{}).time||0;
             tid_recent$list.forEach(record => {
-                if (minTime > record.time) {minTime = record.time;}
+                if (minTime > record.time) minTime = record.time;
             });
             tid_recent$index = tid_recent$list.map(record => record.tid + ':' + (record.time - minTime)).join(' ') + ' 0:' + minTime;
         }
@@ -8320,18 +8332,18 @@ async function init() {
         const user_punish$map = new Map();
         Object.keys(userData).filter(key => key.startsWith('user_punish:#')).forEach(key => {
             const record = tryParseJson(key, userData[key], null);
-            if (record === null) {return;}
+            if (record == null) return;
             record.uid = key.substring(13) * 1;
-            record.logs ||= [];
+            record.logs = record.logs || [];
             user_punish$map.set(key, record);
         });
         Object.keys(currentUserData).filter(key => key.startsWith('user_punish:#')).forEach(key => {
             const current = tryParseJson(key, currentUserData[key], null);
-            if (current === null) {return;}
+            if (current == null) return;
             current.uid = key.substring(13) * 1;
-            current.logs ||= [];
+            current.logs = current.logs || [];
             const dup = user_punish$map.get(key);
-            if (dup === null) {
+            if (dup == null) {
                 user_punish$map.set(key, current);
             } else {
                 dup.logs = mergeArrayData(current.logs, dup.logs, x=>x.time);
@@ -8368,7 +8380,7 @@ async function init() {
             const reader = new Blob([utf8Bytes]).stream().pipeThrough(new CompressionStream('gzip')).getReader();
             while (true) {
                 const status = await reader.read();
-                if (status.done) {break;}
+                if (status.done) break;
                 chunks.push(status.value);
             }
             const blob = new Blob(chunks, { type: 'application/octet-stream' });
@@ -8434,7 +8446,7 @@ async function init() {
             title: '💚喜欢帖子标题关键词列表',
             description: `每行一个关键字
 正则表达式高级设置 (懂的都懂 不懂可无视) 格式: regex:/正则表达式语法/
-      例子: regex:/[东南西北]+/`,
+      例子: regex:/[东南西北]\+/`,
             async read() {
                 const filterConfig = await threadFilterConfigAccess.read();
                 // canonical order: plain words, then regex:, then tid:
@@ -8460,7 +8472,7 @@ async function init() {
         observer.observe(pmElem, { childList: true, subtree: true, attributes: true });
 
         function updatePrivateMessageStatus() {
-            const hasMessage = pmElem.querySelector('img[src="images/colorImagination/shortmail.gif"]') !== null;
+            const hasMessage = pmElem.querySelector('img[src="images/colorImagination/shortmail.gif"]') != null;
             pmNotificationElem.textContent = '';
             if (hasMessage) {
                 pmNotificationElem.classList.add('rinsp-status-new');
@@ -8481,7 +8493,7 @@ async function init() {
 
     function addWatchMenuButton() {
         const userLogin = document.querySelector('#user-login #td_msg');
-        if (userLogin !== null) {
+        if (userLogin != null) {
             const watchMenuElem = newElem('a', 'rinsp-watch-menuitem', {
                 href: 'javascript:void(0)'
             });
@@ -8495,7 +8507,7 @@ async function init() {
     function initTopMenu() {
 
         const watchMenuElem = addWatchMenuButton();
-        if (watchMenuElem === null) {
+        if (watchMenuElem == null) {
             return;
         }
         watchNotificationElem.addEventListener('click', () => {
@@ -8509,9 +8521,9 @@ async function init() {
         });
 
         async function tryCheck(override) {
-            if (DEBUG_MODE) {console.info('tryCheck (override=' + (override||null) + ')');}
-            const pending = [];
-            const skipUntil = Date.now() + TEMP_INCREMENT;
+            if (DEBUG_MODE) console.info('tryCheck (override=' + (override||null) + ')');
+            let pending = [];
+            let skipUntil = Date.now() + TEMP_INCREMENT;
             await updateWatchList(function(watchList) {
                 const now = Date.now();
                 const watchItems = Object.values(watchList).sort(comparator('lastChecked'));
@@ -8519,7 +8531,7 @@ async function init() {
                     return null;
                 }
                 let checkableOldestItem = null;
-                for (const watchItem of watchItems) {
+                for (let watchItem of watchItems) {
                     if (isWatchInactive(watchItem, autoWatchEnabled)) {
                         continue;
                     }
@@ -8532,13 +8544,13 @@ async function init() {
                             continue;
                         }
                     } else if (override !== true) {
-                        const outdatedBy = now - watchItem.lastChecked;
+                        let outdatedBy = now - watchItem.lastChecked;
                         if (watchItem.skipUntil > now) {
-                            if (DEBUG_MODE) {console.info('skip-for-now', watchItem.id);}
+                            if (DEBUG_MODE) console.info('skip-for-now', watchItem.id);
                             continue;
                         }
                         if (outdatedBy < getScaledValue(watchItem, num(MIN_CHECK_INTERVAL), num(MAX_CHECK_INTERVAL), myUserId) * 60000) {
-                            if (checkableOldestItem === null) {
+                            if (checkableOldestItem == null) {
                                 if (outdatedBy >= getScaledValue(watchItem, num(MIN_CHECK_INTERVAL_OLDEST_ITEM), num(MAX_CHECK_INTERVAL_OLDEST_ITEM), myUserId) * 60000) {
                                     checkableOldestItem = watchItem;
                                 }
@@ -8550,25 +8562,27 @@ async function init() {
                     watchItem.skipUntil = skipUntil;
                 }
 
-                if (pending.length === 0 && checkableOldestItem !== null) {
-                    if (DEBUG_MODE) {console.info('tryCheck - picked one oldest item: ' + checkableOldestItem.id);}
+                if (pending.length === 0 && checkableOldestItem != null) {
+                    if (DEBUG_MODE) console.info('tryCheck - picked one oldest item: ' + checkableOldestItem.id);
                     pending.push(checkableOldestItem.id);
                     checkableOldestItem.skipUntil = skipUntil;
                 }
                 if (pending.length > 0) {
                     return watchList;
-                } 
+                } else {
                     return null;
-                
+                }
             });
             if (pending.length > 0) {
-                if (DEBUG_MODE) {console.info('tryCheck - ' + pending.length  + ' items');}
+                if (DEBUG_MODE) console.info('tryCheck - ' + pending.length  + ' items');
                 watchMenuElem.classList.add('rinsp-checking');
                 await runCheck(pending, skipUntil)
                     .finally(function() {
                         watchMenuElem.classList.remove('rinsp-checking');
                     });
-            } else if (DEBUG_MODE) {console.info('tryCheck - nothing to do');}
+            } else {
+                if (DEBUG_MODE) console.info('tryCheck - nothing to do');
+            }
             await refreshWatchStatus();
         }
 
@@ -8578,7 +8592,7 @@ async function init() {
             // returns the fields to merge into the item, or null; runs outside the lock as it fetches
             async function checkWatchPost(watchPostId) {
                 const watchItem = (await readWatchList())['#' + watchPostId];
-                if (watchItem === null) {
+                if (watchItem == null) {
                     return null;
                 }
                 const now = Date.now();
@@ -8597,7 +8611,7 @@ async function init() {
                     if (rateInterval === lastRateRecord[0]) {
                         const accessCount = (lastRateRecord[1]*1)||0;
                         if (accessCount >= MAX_ACC_REQUEST_RATE_COUNT) {
-                            if (DEBUG_MODE) {console.info('HITTING RATE LIMIT - WAITING');}
+                            if (DEBUG_MODE) console.info('HITTING RATE LIMIT - WAITING');
                             await sleep(MIN_REQUEST_DELAY);
                             continue;
                         }
@@ -8611,7 +8625,7 @@ async function init() {
                 const lastPost = await fetchLastPost(watchPostId, ignoreList);
                 if (lastPost.error) {
                     const errorMessage = lastPost.errorMessage || '不明错误';
-                    if (errorMessage.indexOf('刷新不要') !== -1) {
+                    if (errorMessage.indexOf('刷新不要') != -1) {
                         changes.skipUntil = Date.now() + MIN_REQUEST_DELAY;
                     } else {
                         changes.skipUntil = Number.MAX_SAFE_INTEGER;
@@ -8626,7 +8640,7 @@ async function init() {
                     if (lastPost.page > 1) {
                         await sleep(1500);
                         const bountyStatus = await fetchCheckBountyStatus(watchPostId);
-                        if (bountyStatus !== null) {
+                        if (bountyStatus != null) {
                             bountyEnded = bountyStatus.ended === 2;
                             bountyWinner = bountyStatus.winner;
                         }
@@ -8636,7 +8650,7 @@ async function init() {
                     }
                 }
 
-                if (lastPost.postUid === myUserId && lastPost.page === lastPost.maxPage && (lastPost.floor - watchItem.maxFloor) <= 1) {
+                if (lastPost.postUid === myUserId && lastPost.page == lastPost.maxPage && (lastPost.floor - watchItem.maxFloor) <= 1) {
                     // note: only can trust my own last post if the floor differs by one only
                     changes.lastVisitedPage = lastPost.page;
                     changes.lastVisitedFloor = lastPost.floor;
@@ -8645,11 +8659,11 @@ async function init() {
                 let lastUpdateIgnorable = null;
                 if (userConfig.watchSkipIgnoreContent) {
                     const lastSeenPost = lastPost.postsByFloor[watchItem.lastVisitedFloor];
-                    if (lastSeenPost !== null && lastSeenPost.postId === watchItem.lastVisitedPostId) {
+                    if (lastSeenPost != null && lastSeenPost.postId === watchItem.lastVisitedPostId) {
                         // last seen post is still valid and at the same floor
-                        if (DEBUG_MODE) {console.info('check floors', watchItem.lastVisitedFloor + 1, lastPost.floor);}
+                        if (DEBUG_MODE) console.info('check floors', watchItem.lastVisitedFloor + 1, lastPost.floor);
                         for (let floor = watchItem.lastVisitedFloor + 1; floor <= lastPost.floor; floor++) {
-                            if (lastUpdateIgnorable === null) {
+                            if (lastUpdateIgnorable == null) {
                                 lastUpdateIgnorable = true;
                             }
                             const newPost = lastPost.postsByFloor[floor];
@@ -8658,7 +8672,7 @@ async function init() {
                                 break;
                             }
                             if (userConfig.customUserBypassWatchSkip) {
-                                if (userConfig.customUserHashIdMappings['#' + newPost.postUid] !== null) {
+                                if (userConfig.customUserHashIdMappings['#' + newPost.postUid] != null) {
                                     lastUpdateIgnorable = false;
                                     break;
                                 }
@@ -8666,7 +8680,7 @@ async function init() {
                         }
                     }
                 }
-                if (DEBUG_MODE) {console.info('ignorable', watchItem, lastUpdateIgnorable);}
+                if (DEBUG_MODE) console.info('ignorable', watchItem, lastUpdateIgnorable);
                 changes.lastUpdateIgnorable = !!lastUpdateIgnorable;
                 changes.maxPage = lastPost.maxPage;
                 changes.maxFloor = lastPost.floor;
@@ -8679,18 +8693,18 @@ async function init() {
                 if (bountyEnded) { // live bounty -> answered: server-confirmed state change, flagged until the thread is visited
                     changes.bountyUntil = -1;
                     changes.bountyWinner = bountyWinner || null;
-                    changes.bountyChanged = (bountyWinner !== null && bountyWinner === userConfig.myUserHashId) ? 'answered-me' : 'answered';
+                    changes.bountyChanged = (bountyWinner != null && bountyWinner === userConfig.myUserHashId) ? 'answered-me' : 'answered';
                     await recordBountyResult(watchPostId, bountyWinner, threadHistoryAccess);
                 }
                 return changes;
             }
             async function checkAndUpdateWatchPost(watchPostId) {
-                if (DEBUG_MODE) {console.info('checking ... ' + watchPostId);}
+                if (DEBUG_MODE) console.info('checking ... ' + watchPostId);
                 watchMenuElem.classList.add('rinsp-checking');
                 await checkWatchPost(watchPostId)
                     .then(patch => patch && updateWatchList(function(watchList) {
                         const watchItem = watchList['#' + watchPostId];
-                        if (watchItem === null) { // removed while being checked
+                        if (watchItem == null) { // removed while being checked
                             return null;
                         }
                         Object.assign(watchItem, patch);
@@ -8710,7 +8724,7 @@ async function init() {
                             showWatchMenu();
                         }
                     });
-                if (DEBUG_MODE) {console.info('done ... ' + watchPostId);}
+                if (DEBUG_MODE) console.info('done ... ' + watchPostId);
             }
             const checkablePostIds = [];
             postIds.forEach(postId => {
@@ -8722,7 +8736,7 @@ async function init() {
             if (document.getElementById(WATCHER_POPUP_MENU_ID)) {
                 showWatchMenu();
             }
-            for (const watchPostId of checkablePostIds) {
+            for (let watchPostId of checkablePostIds) {
                 if (!first) {
                     await sleep(MIN_REQUEST_DELAY);
                 }
@@ -8736,7 +8750,7 @@ async function init() {
             let errorCount = 0;
             let updateCount = 0;
             let totalCount = 0;
-            for (const watchItem of Object.values(watchList)) {
+            for (let watchItem of Object.values(watchList)) {
                 if (watchItem.auto && !autoWatchEnabled) {
                     continue;
                 }
@@ -8844,7 +8858,7 @@ async function init() {
             return 'error';
         }
         if (watchItem.bountyChanged) { // optional field; absent on older items
-            if (watchItem.lastPostUid !== myUserId && watchItem.maxFloor !== watchItem.lastVisitedFloor) {
+            if (watchItem.lastPostUid !== myUserId && watchItem.maxFloor != watchItem.lastVisitedFloor) {
                 return 'new';
             }
             return 'bounty';
@@ -8852,7 +8866,7 @@ async function init() {
         if (watchItem.lastUpdateIgnorable) {
             return 'ignorable';
         }
-        if (watchItem.lastPostUid !== myUserId && watchItem.maxFloor !== watchItem.lastVisitedFloor) {
+        if (watchItem.lastPostUid !== myUserId && watchItem.maxFloor != watchItem.lastVisitedFloor) {
             return 'new';
         }
     }
@@ -8889,11 +8903,11 @@ async function init() {
 
     let watchMenuCloseObserver = null;
     function refreshWatchStatusWhenMenuClosed() {
-        if (watchMenuCloseObserver !== null) {
+        if (watchMenuCloseObserver != null) {
             return;
         }
         watchMenuCloseObserver = new MutationObserver(function() {
-            if (document.getElementById(WATCHER_POPUP_MENU_ID) === null) { // re-render replaces the menu synchronously
+            if (document.getElementById(WATCHER_POPUP_MENU_ID) == null) { // re-render replaces the menu synchronously
                 watchMenuCloseObserver.disconnect();
                 watchMenuCloseObserver = null;
                 watcherApi.refreshWatchStatus();
@@ -9038,11 +9052,11 @@ async function init() {
                 countStatusElem.textContent = text;
                 countStatusElem.setAttribute('title', title);
                 if (active >= max) {
-                    if (maxReachedWarnElem === null) {
+                    if (maxReachedWarnElem == null) {
                         maxReachedWarnElem = addElem(actCell, 'span', 'rinsp-limit-warning');
                         maxReachedWarnElem.textContent = '关注数量已达上限';
                     }
-                } else if (maxReachedWarnElem !== null) {
+                } else if (maxReachedWarnElem != null) {
                     maxReachedWarnElem.remove();
                     maxReachedWarnElem = null;
                 }
@@ -9073,7 +9087,7 @@ async function init() {
                         let pinned = false;
                         updateWatchList(watchList => {
                             const item = watchList['#' + watchItem.id];
-                            if (item === null || !item.auto) {
+                            if (item == null || !item.auto) {
                                 return null;
                             }
                             if (countActiveWatchItems(watchList) >= num(MAX_WATCH_ITEM_COUNT)) {
@@ -9117,7 +9131,7 @@ async function init() {
                 } else if (watchItem.areaName === REQUEST_ZONE_NAME) {
                     if (watchItem.bountyUntil === -1) {
                         bountyCell.classList.add('rinsp-bounty-answered');
-                        if (watchItem.bountyWinner !== null && watchItem.bountyWinner === userConfig.myUserHashId) {
+                        if (watchItem.bountyWinner != null && watchItem.bountyWinner === userConfig.myUserHashId) {
                             bountyCell.classList.add('rinsp-bounty-mine');
                             bountyCell.textContent = '🏅我的最佳';
                         } else {
@@ -9127,7 +9141,7 @@ async function init() {
                         const hourLeft = ((watchItem.bountyUntil||0) - now) / 3600000;
                         if (hourLeft <= 0) {
                             bountyCell.classList.add('rinsp-bounty-ended');
-                            if (watchItem.bountyUntil !== null) {
+                            if (watchItem.bountyUntil != null) {
                                 const ageString = getAgeString((now - watchItem.bountyUntil) / 60000);
                                 bountyCell.textContent = `已过期 (${ageString})`;
                             } else {
@@ -9192,7 +9206,7 @@ async function init() {
                     style: 'cursor:pointer'
                 });
                 delButton.addEventListener('click', function() {
-                    if (watchItem.lastError === null && !inactive && !watchItem.auto) {
+                    if (watchItem.lastError == null && !inactive && !watchItem.auto) {
                         if (!confirm('从关注列表中移除？以后不会收到更多回复通知')) {
                             return;
                         }
@@ -9218,7 +9232,7 @@ async function init() {
                 });
                 addElem(trElem3, 'td');
                 const status = getWatchItemStatus(watchItem);
-                if (status !== null) {
+                if (status != null) {
                     trElem3.classList.add('rinsp-' + status);
                 }
 
@@ -9229,15 +9243,15 @@ async function init() {
         function formatRangeText(minText, maxText) {
             if (minText === maxText) {
                 return minText;
-            } 
+            } else {
                 return minText + ' - ' + maxText;
-            
+            }
         }
     }
 
     function initCurrentPost() {
         const currentPostLink = document.querySelector('#breadcrumbs .crumbs-item.current strong > a[href^="read.php?tid-"]');
-        if (currentPostLink === null) {
+        if (currentPostLink == null) {
             return;
         }
 
@@ -9253,7 +9267,7 @@ async function init() {
 
         const pageArr = readCurrentAndMaxPage(document);
         const currentPage = pageArr[0];
-        const maxPage = pageArr[1];
+        let maxPage = pageArr[1];
 
         if (userConfig.showFloatingStoreThreadButton) {
             addFloatingFavorButton(topControlContainer, postId, favorThreadsCacheAccess);
@@ -9294,7 +9308,7 @@ async function init() {
 
         function initIfFirstPage() {
             const shouElem = document.querySelector('.tr1.r_one .tipad .readbot .shou');
-            if (shouElem === null) {
+            if (shouElem == null) {
                 return;
             }
 
@@ -9359,16 +9373,16 @@ async function init() {
             let fp = null;
             if (currentPage === 1) {
                 const onlyGfLink = document.querySelector('#td_tpc a[href^="read.php?tid-' + postId + '-uid-"]');
-                if (onlyGfLink !== null) {
+                if (onlyGfLink != null) {
                     fp = document;
                 }
             }
-            if (fp === null) {
+            if (fp == null) {
                 fp = await fetchGetPage(`${document.location.origin}/read.php?tid-${postId}.html`);
             }
 
             const onlyGfLink = fp.querySelector('#td_tpc a[href^="read.php?tid-' + postId + '-uid-"]');
-            if (onlyGfLink === null) {
+            if (onlyGfLink == null) {
                 return null;
             }
             const gfUid = Number.parseInt(onlyGfLink.getAttribute('href').replace(/.*-uid-/, ''));
@@ -9383,7 +9397,7 @@ async function init() {
             }
 
             const lastPost = await getLastPost();
-            if (lastPost === null || lastPost.error) {
+            if (lastPost == null || lastPost.error) {
                 return null;
             }
             return {
@@ -9415,20 +9429,20 @@ async function init() {
             watcherApi.currentThread.setBusy(true);
             try {
                 const newItem = await collectWatchItemData();
-                if (newItem === null) {
+                if (newItem == null) {
                     return;
                 }
                 let added = false;
                 await updateWatchList(watchList => {
                     const existing = watchList[postIdKey];
-                    if (existing !== null && !existing.auto) {
+                    if (existing != null && !existing.auto) {
                         added = true; // already a manual item
                         return null;
                     }
                     if (countActiveWatchItems(watchList) >= num(MAX_WATCH_ITEM_COUNT)) {
                         return null;
                     }
-                    if (existing !== null) { // promote the auto item, keeping its read state
+                    if (existing != null) { // promote the auto item, keeping its read state
                         delete existing.auto;
                         existing.timeAdded = Date.now();
                     } else {
@@ -9454,13 +9468,13 @@ async function init() {
                 return; // nothing to record and nothing to add
             }
             const newItem = await collectWatchItemData();
-            if (newItem === null) {
+            if (newItem == null) {
                 return;
             }
             let state = null; // 'manual' | 'auto'
             await updateWatchList(watchList => {
                 const existing = watchList[postIdKey];
-                if (existing !== null) { // manual or auto: my reply becomes the last post, which schedules the fast re-checks
+                if (existing != null) { // manual or auto: my reply becomes the last post, which schedules the fast re-checks
                     Object.assign(existing, {
                         postTitle: newItem.postTitle,
                         maxPage: newItem.maxPage,
@@ -9485,17 +9499,17 @@ async function init() {
                 }
                 while (countActiveAutoWatchItems(watchList) >= num(MAX_AUTO_WATCH_ITEM_COUNT)) {
                     const victim = evictAutoWatchItem(watchList);
-                    if (victim === null) {
+                    if (victim == null) {
                         break;
                     }
-                    if (DEBUG_MODE) {console.info('auto-watch evicted', victim.id, victim.postTitle);}
+                    if (DEBUG_MODE) console.info('auto-watch evicted', victim.id, victim.postTitle);
                 }
                 newItem.auto = true;
                 watchList[postIdKey] = newItem;
                 state = 'auto';
                 return watchList;
             });
-            if (state !== null) {
+            if (state != null) {
                 watcherApi.currentThread.setWatching(true, state === 'auto');
             }
         }
@@ -9504,7 +9518,7 @@ async function init() {
         // reload-path replies (quick reply without refresh-free, or the full editor) leave a marker on submit
         if (autoWatchEnabled) {
             const quickReplyForm = document.FORM;
-            if (quickReplyForm !== null && quickReplyForm.getAttribute('action') === 'post.php?') {
+            if (quickReplyForm != null && quickReplyForm.getAttribute('action') === 'post.php?') {
                 quickReplyForm.addEventListener('submit', () => setAutoWatchPendingMarker(myUserId, postId));
             }
         }
@@ -9516,7 +9530,7 @@ async function init() {
         async function update(alsoUpdateSavedData) {
             if (!alsoUpdateSavedData) {
                 const watchItem = (await readWatchList())[postIdKey];
-                watcherApi.currentThread.setWatching(watchItem !== null, watchItem !== null && !!watchItem.auto);
+                watcherApi.currentThread.setWatching(watchItem != null, watchItem != null && !!watchItem.auto);
                 return;
             }
             await updateWatchList(markVisited);
@@ -9524,9 +9538,9 @@ async function init() {
 
         async function markVisited(watchList) {
             const watchItem = watchList[postIdKey];
-            watcherApi.currentThread.setWatching(watchItem !== null, watchItem !== null && !!watchItem.auto);
-            if (watchItem !== null) {
-                if (DEBUG_MODE) {console.info('mark read', postId);}
+            watcherApi.currentThread.setWatching(watchItem != null, watchItem != null && !!watchItem.auto);
+            if (watchItem != null) {
+                if (DEBUG_MODE) console.info('mark read', postId);
                 let dirty = false;
                 if (watchItem.bountyChanged) { // the bounty banner is visible from any page: seen now
                     delete watchItem.bountyChanged;
@@ -9537,7 +9551,7 @@ async function init() {
                 if (watchItem.bountyUntil > 0) {
                     if (currentPage === 1) {
                         const bountyStatus = getBountyStatus(document);
-                        if (bountyStatus !== null) {
+                        if (bountyStatus != null) {
                             bountyUntil = bountyStatus.bountyUntil;
                             if (bountyStatus.ended === 2) {
                                 watchItem.bountyWinner = bountyStatus.winner || null;
@@ -9562,11 +9576,11 @@ async function init() {
                     watchItem.lastChecked = Date.now();
                     watchItem.skipUntil = 0;
                     watchItem.lastError = null;
-                    if (bountyUntil !== null) {
+                    if (bountyUntil != null) {
                         watchItem.bountyUntil = bountyUntil;
                     }
                     return watchList;
-                } else if (bountyUntil !== null && watchItem.bountyUntil !== bountyUntil) {
+                } else if (bountyUntil != null && watchItem.bountyUntil != bountyUntil) {
                     watchItem.bountyUntil = bountyUntil;
                     return watchList;
                 } else if (dirty) {
@@ -9580,7 +9594,7 @@ async function init() {
             // a reply submitted via a page reload: confirm the last post is mine, then auto-watch
             if (autoWatchEnabled && currentPage === maxPage && takeAutoWatchPendingMarker(myUserId, postId)) {
                 const lastPost = findLastPost(document, null, null);
-                if (lastPost !== null && lastPost.postUid === myUserId) {
+                if (lastPost != null && lastPost.postUid === myUserId) {
                     return autoAddToWatchList();
                 }
             }
@@ -9590,17 +9604,17 @@ async function init() {
             //console.info('getLastPost', currentPage, maxPage);
             if (currentPage === maxPage) {
                 return findLastPost(document, null, null); // ignore filters not needed
-            } 
+            } else {
                 return fetchLastPost(postId);
-            
+            }
         }
 
     }
 
-    /* async function fetchCheckBountyEnded(postId) {
+    async function fetchCheckBountyEnded(postId) {
         const bountyStatus = await fetchCheckBountyStatus(postId);
         return bountyStatus == null ? null : bountyStatus.ended === 2;
-    } */
+    }
 
     async function fetchCheckBountyStatus(postId) {
         const doc = await fetchGetPage(`${document.location.origin}/read.php?tid-${postId}.html`);
@@ -9611,15 +9625,15 @@ async function init() {
         const url = `${document.location.origin}/read.php?tid-${postId}-page-e-fpage-1.html`;
         const doc = await fetchGetPage(url);
         const lastPost = findLastPost(doc, userFilter, ignoreList);
-        if (DEBUG_MODE) {console.info('fetchLastPost', url, lastPost);}
-        if (lastPost === null) {
+        if (DEBUG_MODE) console.info('fetchLastPost', url, lastPost);
+        if (lastPost == null) {
             return {
                 error: 'PAGE_GONE',
                 errorMessage: findErrorMessage(doc)
             };
-        } 
+        } else {
             return lastPost;
-        
+        }
     }
 
     function getStatusText(watchItem) {
@@ -9628,7 +9642,7 @@ async function init() {
             return watchItem.lastError;
         }
         if (watchItem.bountyChanged) { // details are in the bounty column; only flag the change here
-            return '悬赏状态更新' + (watchItem.maxFloor !== watchItem.lastVisitedFloor ? ' · ' + getStatusTextByFloor(watchItem) : '');
+            return '悬赏状态更新' + (watchItem.maxFloor != watchItem.lastVisitedFloor ? ' · ' + getStatusTextByFloor(watchItem) : '');
         }
         return getStatusTextByFloor(watchItem);
     }
@@ -9637,7 +9651,7 @@ async function init() {
         const unreadFloor = watchItem.maxFloor - watchItem.lastVisitedFloor;
         if (unreadFloor === 0) {
             const ageMins = (Date.now() - watchItem.lastChecked) / 60000;
-            const ageString = getAgeString(ageMins);
+            let ageString = getAgeString(ageMins);
             return `${ageString}`;
         }
         if (unreadFloor < 0) {
@@ -9647,14 +9661,14 @@ async function init() {
             return '屏蔽 ' + unreadFloor + ' 回复';
         } else if (isOwnerLastPost(watchItem)) {
             return unreadFloor + ' 新回复 (楼主)';
-        } 
+        } else {
             return '有 ' + unreadFloor + ' 新回复';
-        
+        }
     }
 
     function isOwnerLastPost(watchItem) {
         // owner is absent on items stored before it was recorded
-        return watchItem.owner !== null && watchItem.lastPostUid === watchItem.owner && watchItem.lastPostUid !== myUserId;
+        return watchItem.owner != null && watchItem.lastPostUid === watchItem.owner && watchItem.lastPostUid !== myUserId;
     }
 
     function findLastPost(doc, userFilter, ignoreList) {
@@ -9681,7 +9695,7 @@ async function init() {
         const lastPost = postsByFloor[highestFloor];
         const pageArr = readCurrentAndMaxPage(doc);
 
-        if (ignoreList !== null) {
+        if (ignoreList != null) {
             const ignoreContentMatcher = createIgnoreContentMatcher(ignoreList);
             posts.forEach(post => {
                 if (post.floor > 0) {
@@ -9697,8 +9711,8 @@ async function init() {
         let bountyWinner = null;
         if (pageArr[0] === 1) {
             const bountyStatus = getBountyStatus(doc);
-            bountyEnded = bountyStatus === null ? null : bountyStatus.ended === 2;
-            bountyWinner = bountyStatus === null ? null : bountyStatus.winner;
+            bountyEnded = bountyStatus == null ? null : bountyStatus.ended === 2;
+            bountyWinner = bountyStatus == null ? null : bountyStatus.winner;
         }
 
         return {
@@ -9716,15 +9730,15 @@ async function init() {
 
     async function readWatchList() {
         try {
-            const sSavedData = await GM.getValue('my_watchlist#' + myUserId);
-            const watchList = JSON.parse(sSavedData);
+            let sSavedData = await GM.getValue('my_watchlist#' + myUserId);
+            let watchList = typeof sSavedData === 'string' ? JSON.parse(sSavedData) : (sSavedData || {});
             Object.values(watchList).forEach(watchItem => {
-                if (watchItem.timeOpened === null) {
+                if (watchItem.timeOpened == null) {
                     watchItem.timeOpened = Date.now(); // backward-compatibility
                 }
             });
             return watchList;
-        } catch  {}
+        } catch (e) {}
         return {};
     }
 
@@ -9737,7 +9751,7 @@ async function init() {
         async function execute() {
             const watchList = await readWatchList();
             const updatedWatchList = await updater(watchList);
-            if (updatedWatchList !== null) {
+            if (updatedWatchList != null) {
                 await writeWatchList(updatedWatchList);
             }
         }
@@ -9746,7 +9760,7 @@ async function init() {
 
     async function testRecordBestAnswerNotification(userConfig, threadHistoryAccess) {
         const canditateThreadLink = document.querySelector('#info_base .set-table2 > tbody > tr > td > b + a[href^="//"][href$=".html"]');
-        if (canditateThreadLink === null) {
+        if (canditateThreadLink == null) {
             return;
         }
         const tid = (canditateThreadLink.getAttribute('href').match(/.*\/read\.php\?tid-(\d+)\.html$/)||[])[1] * 1;
@@ -9761,7 +9775,7 @@ async function init() {
 
     // syncs a settled bounty into the visit history so the thread/reply lists show it without opening the thread
     async function recordBountyResult(tid, winner, threadHistoryAccess) {
-        if (threadHistoryAccess === null) {
+        if (threadHistoryAccess == null) {
             return;
         }
         const lastAccessRecord = await threadHistoryAccess.recentAccessStore.get(tid);
@@ -9777,7 +9791,7 @@ async function init() {
 
     function enhanceMessageReadDisplay(userConfig) {
         const userLink = document.querySelector('#info_base .set-table2 > tbody > tr:first-child > td > a[href^="u.php?action-show-uid-"]');
-        if (userLink === null) {
+        if (userLink == null) {
             return;
         }
         const userId = Number.parseInt(userLink.getAttribute('href').substring(22));
@@ -9786,7 +9800,7 @@ async function init() {
             userLink.closest('table').classList.add('rinsp-system-message-view');
         } else {
             const userRecord = userConfig.customUserHashIdMappings['#' + userId];
-            if (userRecord !== null) {
+            if (userRecord != null) {
                 userLink.closest('td').classList.add('rinsp-message-user-mapped');
                 const currentName = userLink.textContent;
                 userLink.textContent = userRecord[2];
@@ -9799,7 +9813,7 @@ async function init() {
     function enhanceMessagingList(userConfig, userPinArea, inboxMode) {
         document.querySelectorAll('#set-content .set-tab-box #info_base .set-table2').forEach(list => {
 
-            const messages = [];
+            let messages = [];
 
             const selectionPanel = newElem('div', 'rinsp-message-selection-panel');
             list.parentNode.insertBefore(selectionPanel, list);
@@ -9842,7 +9856,7 @@ async function init() {
                 list.querySelectorAll('tbody > tr > td > a[href^="u.php?action-show-uid-"]').forEach(userLink => {
                     const row = userLink.closest('tr');
                     const messageLink = row.querySelector('a[href^="message.php?action-read-mid-"],a[href^="message.php?action-readscout-mid-"],a[href^="message.php?action-readsnd-mid-"]');
-                    if (messageLink === null) {
+                    if (messageLink == null) {
                         return;
                     }
                     const checkbox = row.querySelector('td > input[name="delid[]"]');
@@ -9854,7 +9868,7 @@ async function init() {
                         const userCell = userLink.closest('td');
                         userCell.classList.remove('rinsp-message-user-pinned');
                         userCell.classList.remove('rinsp-message-user-mapped');
-                        const pinnedUser = userPinArea.getPinned(userId);
+                        let pinnedUser = userPinArea.getPinned(userId);
                         if (pinnedUser) {
                             userCell.classList.add('rinsp-message-user-pinned');
                             userPinArea.addLocation(userId, '⚪', null, () => {
@@ -9864,13 +9878,13 @@ async function init() {
                                 });
                             });
                         }
-                        const userRecord = userConfig.customUserHashIdMappings['#' + userId];
-                        if (userRecord !== null) {
+                        let userRecord = userConfig.customUserHashIdMappings['#' + userId];
+                        if (userRecord != null) {
                             if (!pinnedUser) {
                                 userCell.classList.add('rinsp-message-user-mapped');
                             }
                             // apply() re-runs on pin updates, after the text is already replaced
-                            if (userLink.dataset.rinspOrigName === null) {
+                            if (userLink.dataset.rinspOrigName == null) {
                                 userLink.dataset.rinspOrigName = userLink.textContent;
                             }
                             const currentName = userLink.dataset.rinspOrigName;
@@ -9898,7 +9912,7 @@ async function init() {
 
     function enhanceMessagingForm(queryParams) {
         const form = document.querySelector('#main form[name="FORM"][action="message.php"]');
-        if (form === null) {
+        if (form == null) {
             return null;
         }
 
@@ -9938,11 +9952,11 @@ async function init() {
 
     function addOriginalMessageBox(form, remid) {
         const contentField = form.querySelector('textarea[name="atc_content"]');
-        if (contentField === null) {
+        if (contentField == null) {
             return;
         }
         const contentRow = contentField.closest('tr');
-        if (contentRow === null || contentRow.parentNode === null) {
+        if (contentRow == null || contentRow.parentNode == null) {
             return;
         }
 
@@ -9970,7 +9984,7 @@ async function init() {
             try {
                 const doc = await fetchGetPage(`${document.location.origin}/${readUrl}`, null, true);
                 const originCell = findMessageContentCell(doc);
-                if (originCell === null) {
+                if (originCell == null) {
                     throw new Error('找不到原信息内容');
                 }
                 body.textContent = '';
@@ -10105,7 +10119,7 @@ async function init() {
                     hint.textContent =  `${curLength} (过长) / ${byteLimit}字节`;
                     hint.classList.add('rinsp-input-max-exceeded');
                     input.classList.add('rinsp-input-max-exceeded');
-                    
+                    return;
                 } else if (!warnOnly) {
                     if (charLimit === 0) {
                         hint.textContent =  `${curLength} / ${byteLimit}字节`;
@@ -10124,7 +10138,7 @@ async function init() {
 
     async function addPicWallDefaultOption(fid) {
         const toggleButton = document.querySelector('#breadcrumbs > .fr > a[href^="thread"]');
-        if (toggleButton === null || !['[点击进入图墙模式]', '[点击进入列表模式]'].includes(toggleButton.textContent.trim())) {
+        if (toggleButton == null || !['[点击进入图墙模式]', '[点击进入列表模式]'].includes(toggleButton.textContent.trim())) {
             return;
         }
         const toggle = newElem('span', 'fr');
@@ -10156,16 +10170,16 @@ async function init() {
 
     async function enableForumAnnouncementFolding() {
         const anchor = document.querySelector('td.tac > img[src="images/colorImagination/thread/anc.gif"]');
-        if (anchor === null) {
+        if (anchor == null) {
             return;
         }
         const th = anchor.parentNode.nextElementSibling;
-        if (th === null || !th.textContent.trim().startsWith('论坛公告:')) {
+        if (th == null || !th.textContent.trim().startsWith('论坛公告:')) {
             return;
         }
         const row = anchor.closest('tr.tr3');
         row.classList.add('rinsp-top-announcement-row');
-        const announcementRows = [];
+        let announcementRows = [];
         const normalTopicMarker = document.querySelector('.rinsp-top-announcement-row ~ tr.tr2 > .tac');
         if (normalTopicMarker && normalTopicMarker.textContent.trim() === '普通主题') {
             const endMarkerRow = normalTopicMarker.closest('.tr2');
@@ -10175,8 +10189,8 @@ async function init() {
             }
         } else {
             let testRow = row;
-            while ((testRow = testRow.nextElementSibling) !== null) {
-                if (testRow.querySelector('td + td > img[src="images/colorImagination/file/headtopic_3.gif"]') === null) {
+            while ((testRow = testRow.nextElementSibling) != null) {
+                if (testRow.querySelector('td + td > img[src="images/colorImagination/file/headtopic_3.gif"]') == null) {
                     break;
                 }
                 announcementRows.push(testRow);
@@ -10215,13 +10229,13 @@ async function init() {
 
     async function enhanceSearchPage() {
         const searchForm = document.querySelector('#main form[action="search.php?"]');
-        if (searchForm === null) {
+        if (searchForm == null) {
             return;
         }
 
         const searchPref = await searchConfigAccess.read();
         const keywordInput = searchForm.querySelector('input[name="keyword"]');
-        if (keywordInput !== null) {
+        if (keywordInput != null) {
             keywordInput.classList.add('rinsp-search-keyword-input');
             enhanceKeywordInput(keywordInput, searchPref);
             setTimeout(function () {
@@ -10230,12 +10244,12 @@ async function init() {
         }
     
         const dateRangeSelect = searchForm.querySelector('select[name="sch_time"]');
-        if (dateRangeSelect !== null) {
+        if (dateRangeSelect != null) {
             enhanceSearchRangeSelect(dateRangeSelect, searchPref);
         }
 
         const topicSelect = searchForm.querySelector('select[name="f_fid"]');
-        if (topicSelect !== null) {
+        if (topicSelect != null) {
             enhanceSearchTopicSelect(topicSelect, searchPref);
         }
         const prefillParamString = (document.location.hash.match(/^#prefill\((.*)\)$/)||[])[1];
@@ -10246,16 +10260,16 @@ async function init() {
                 for (let i = 0; i < array.length - 1; i += 2) {
                     prefillData[array[i]] = array[i + 1];
                 }
-            } catch  {}
+            } catch (ignore) {}
 
-            if (prefillData.fid > 0 && topicSelect !== null) {
+            if (prefillData.fid > 0 && topicSelect != null) {
                 topicSelect.value = String(prefillData.fid);
             }
-            if (prefillData.keyword && keywordInput !== null) {
+            if (prefillData.keyword && keywordInput != null) {
                 keywordInput.value = prefillData.keyword;
             }
             const pwuserInput = searchForm.querySelector('input[name="pwuser"]');
-            if (prefillData.pwuser && pwuserInput !== null) {
+            if (prefillData.pwuser && pwuserInput != null) {
                 pwuserInput.value = prefillData.pwuser;
             }
         }
@@ -10339,7 +10353,7 @@ async function init() {
         await update(searchPref.pinnedTopics || {});
 
         async function update(topicMappings) {
-            const entries = Object.entries(topicMappings);
+            let entries = Object.entries(topicMappings);
 
             let favOptGroup = null;
             const fullOptGroup = newElem('optgroup', null, { label: '目录树' });
@@ -10367,7 +10381,7 @@ async function init() {
                     }
                 });
             }
-            if (favOptGroup !== null) {
+            if (favOptGroup != null) {
                 topicSelect.appendChild(favOptGroup);
             }
             topicSelect.appendChild(fullOptGroup);
@@ -10377,7 +10391,7 @@ async function init() {
             parentCell.classList.add('rinsp-temp-disabled');
             async function execute() {
                 const current = getCurrentItem();
-                const newSearchPref = await searchConfigAccess.update(function(updatingSearchPref) {
+                let newSearchPref = await searchConfigAccess.update(function(updatingSearchPref) {
                     const updatingMappings = updatingSearchPref.pinnedTopics || {};
                     if (current.fav) {
                         delete updatingMappings['$' + current.value];
@@ -10392,7 +10406,7 @@ async function init() {
                     updatingSearchPref.pinnedTopics = updatingMappings;
                     return updatingSearchPref;
                 });
-                if (newSearchPref !== null) {
+                if (newSearchPref != null) {
                     topicSelect.innerHTML = originalContent;
                     update(newSearchPref.pinnedTopics||{});
                     topicSelect.value = current.value;
@@ -10408,19 +10422,19 @@ async function init() {
         });
         function updatePin() {
             const current = getCurrentItem();
-            if (current === null || current.value === 'all') {
+            if (current == null || current.value === 'all') {
                 pin.textContent = '';
             } else {
                 pin.textContent = current.fav ? '❌删除捷径' : '➕存为捷径';
             }
         }
         function getCurrentItem() {
-            const options = topicSelect.querySelectorAll('option[value="' + topicSelect.value + '"]');
+            let options = topicSelect.querySelectorAll('option[value="' + topicSelect.value + '"]');
             if (options.length === 0) {
                 return null;
             }
             return {
-                fav: options[0].closest('.rinsp-fav-search-area-group') !== null,
+                fav: options[0].closest('.rinsp-fav-search-area-group') != null,
                 label: options[options.length - 1].textContent,
                 value: topicSelect.value
             };
@@ -10450,29 +10464,31 @@ async function init() {
         } else {
             userFilterRule = userFilter.users['#' + post.postUid];
         }
-        const userBlacklisted = userFilterRule && userFilterRule.hideReplies;
+        let userBlacklisted = userFilterRule && userFilterRule.hideReplies;
         if (post.postDefaultHidden) {
             ignoreState = true;
         } else if (userBlacklisted) {
             post.rootElem.classList.add('rinsp-filter-ignored-byuid');
             ignoreState = true;
-        } else if (userConfig.customUserpicBypassIgnoreList && !post.defaultUserPic) {
+        } else {
+            if (userConfig.customUserpicBypassIgnoreList && !post.defaultUserPic) {
                 post.rootElem.classList.add('rinsp-filter-bypass');
             } else if (userConfig.customUserBypassIgnoreList) {
                 // user blacklist still wins over bookmarked users
-                if (userConfig.customUserHashIdMappings['#' + post.postUid] !== null) {
+                if (userConfig.customUserHashIdMappings['#' + post.postUid] != null) {
                     post.rootElem.classList.add('rinsp-filter-bypass');
                 }
             }
+        }
         let effectiveContent = null;
-        if (ignoreContentMatcher !== null) {
+        if (ignoreContentMatcher != null) {
             if (post.contentDefaultIgnorable) {
                 effectiveContent = DEFAULT_IGNORABLE_MARKER_TAG;
             } else {
                 effectiveContent = getEffectiveTextContent(post.contentElem, !!userConfig.ignoreContentUseTextOnly, !!userConfig.treatAllEmojiTheSameWay);
             }
             //if (DEBUG_MODE) console.info(item, 'effectiveContent: `' + effectiveContent + '`');
-            if (!ignoreState && effectiveContent !== null && ignoreContentMatcher.matches(effectiveContent)) {
+            if (!ignoreState && effectiveContent != null && ignoreContentMatcher.matches(effectiveContent)) {
                 ignoreState = true;
                 post.rootElem.classList.add('rinsp-filter-ignored-bykeyword');
             }
@@ -10612,13 +10628,13 @@ async function init() {
             }
 
             function setupIgnoreButton(buttonDef) {
-                if (effectiveContent !== null && !post.rootElem.classList.contains('rinsp-filter-ignored-byuid')) {
-                    const ignoreElem = buttonDef.create(post);
+                if (effectiveContent != null && !post.rootElem.classList.contains('rinsp-filter-ignored-byuid')) {
+                    let ignoreElem = buttonDef.create(post);
                     ignoreElem.classList.add('rinsp-ignore-switch');
                     const ignoreLabel = addElem(ignoreElem, 'a', null, { href: 'javascript:void(0)', title: '关键内容: \n' + effectiveContent });
     
                     ignoreLabel.addEventListener('click', async function() {
-                        if (DEBUG_MODE) {console.info('effective content = ' + effectiveContent);}
+                        if (DEBUG_MODE) console.info('effective content = ' + effectiveContent);
                         ignoreElem.classList.add('rinsp-config-saving');
                         const newIgnoredState = !ignoreState;
                         const updatedIgnoreList = await contentIgnoreListConfigAccess.update(function(ignoreList) {
@@ -10638,7 +10654,7 @@ async function init() {
                             ignoreElem.classList.remove('rinsp-config-saving');
                         });
         
-                        if (updatedIgnoreList !== null) {
+                        if (updatedIgnoreList != null) {
                             onUpdate({ ignoreList: updatedIgnoreList });
                         }
                         return false;
@@ -10663,7 +10679,7 @@ async function init() {
                     groups.push(thisSingleGroup);
                 } else {
                     const last = groups[groups.length - 1];
-                    if (floor === last.floorMax + 1 && !forcedSingleton && !last.singleton) {
+                    if (floor == last.floorMax + 1 && !forcedSingleton && !last.singleton) {
                         last.elems.push({ row: post.rootElem, floor: post.floorElem });
                         last.floorMax = floor;
                     } else {
@@ -10709,9 +10725,9 @@ async function init() {
             .map(chunk => {
                 if (chunk.length === 0 || chunk[0] === '<') {
                     return chunk;
-                } 
+                } else {
                     return simplifyText(chunk);
-                
+                }
             })
             .join('');
     }
@@ -10732,8 +10748,10 @@ async function init() {
         const updatedUserFilterConfig = await userFilterConfigAccess.update(function(userFilterConfig) {
             const userIdKey = '#' + opId;
             if (data) {
-                const updateData = {name: opName, ...data};
-                if (userFilterConfig.users[userIdKey] === null) {
+                const updateData = Object.assign({
+                    name: opName
+                }, data);
+                if (userFilterConfig.users[userIdKey] == null) {
                     userFilterConfig.users[userIdKey] = updateData;
                 } else {
                     userFilterConfig.users[userIdKey] = Object.assign(userFilterConfig.users[userIdKey], updateData);
@@ -10766,8 +10784,8 @@ async function init() {
 
     async function promptEditKeywords(message, initValues, initText, attr, callback) {
         const quoted = kw => kw.indexOf(' ') !== -1 ? '"' + kw + '"' : kw;
-        const input = prompt(message, initText === null ? initValues.slice(0).sort().map(quoted).join(' ') : initText);
-        if (input === null) {
+        const input = prompt(message, initText == null ? initValues.slice(0).sort().map(quoted).join(' ') : initText);
+        if (input == null) {
             return;
         }
         // Space-separated, with "quoted phrases" for terms containing a space; quotes are never stored.
@@ -10825,7 +10843,7 @@ async function init() {
         
         function isSettlementPost(title) {
             if (userConfig.hideSettlementPost$UseDefaultKeywords) {
-                if (title.match(DEFAULT_SETTLEMENT_BLACKLIST_PATTERN) !== null) {
+                if (title.match(DEFAULT_SETTLEMENT_BLACKLIST_PATTERN) != null) {
                     return false;
                 }
                 let titleReduced = title.replace(/@[^@ ]+/, '');
@@ -10836,14 +10854,14 @@ async function init() {
                 const keywordLength = beforeLength - titleReduced.length;
                 titleReduced = titleReduced.trim();
                 if (hasTarget && titleReduced.length === 0)
-                    {return true;}
+                    return true;
                 if (titleReduced.length <= DEFAULT_SETTLEMENT_TITLE_MAX_OTHER_TEXT_AMOUNT) {
                     if (hasTarget || keywordLength > 0) {
                         return true;
                     }
                 }
             }
-            if (settlementPostMatcher !== null) {
+            if (settlementPostMatcher != null) {
                 const matches = settlementPostMatcher.match(title.toLowerCase());
                 if (matches.size > 0) {
                     return true;
@@ -10856,7 +10874,7 @@ async function init() {
             async run(thread) {
                 this.clear(thread);
                 const areaTag = thread.titleCell.querySelector(`.s8[href^="thread.php?fid-${QUESTION_AND_REQUEST_AREA_ID}-type-"]`);
-                if (areaTag === null) {
+                if (areaTag == null) {
                     return;
                 }
                 thread.row.classList.add('rinsp-request-thread');
@@ -10971,7 +10989,7 @@ async function init() {
                 lastSeenRecords.forEach((record, i) => {
                     const thread = threadsById.get(tids[i]);
                     this.clear(thread);
-                    if (record !== null) {
+                    if (record != null) {
                         thread.row.classList.add('rinsp-thread-visited');
                         if (thread.replyCount > record) {
                             thread.row.classList.add('rinsp-thread-visited-update');
@@ -11015,7 +11033,7 @@ async function init() {
         return {
             run(thread) {
                 this.clear(thread);
-                if (thread.areaId !== null) {
+                if (thread.areaId != null) {
                     if (PAYWALL_AREA_IDS.has(thread.areaId)) {
                         thread.row.classList.add('rinsp-thread-paywall');
                     }
@@ -11045,12 +11063,12 @@ async function init() {
         return {
             run(thread) {
                 this.clear(thread);
-                const scoreElem = thread.titleCell.querySelector('h3 + .gray.tpage');
+                let scoreElem = thread.titleCell.querySelector('h3 + .gray.tpage');
                 if (scoreElem) {
                     const score = (scoreElem.textContent.match(/ *( [+-]\d+ ) */)||[])[1] * 1;
                     
                     const defaultRating = getDefaultRating(thread.titleCell.querySelector('h3 > a').textContent);
-                    if (isScoreMismatched(score, defaultRating, thread.titleCell.querySelector('h3 > a > b') !== null)) {
+                    if (isScoreMismatched(score, defaultRating, thread.titleCell.querySelector('h3 > a > b') != null)) {
                         thread.row.classList.add('rinsp-thread-filter-miscored');
                     } else {
                         thread.row.classList.add('rinsp-thread-filter-scored');
@@ -11245,13 +11263,13 @@ async function init() {
     
                 thread.titleCell.appendChild(document.createTextNode(' ')); // put a space to avoid copying to include button text
                 const dislikeUserRule = userFilter.users['#' + thread.op];
-                if (dislikeUserRule !== null) {
+                if (dislikeUserRule != null) {
                     if (dislikeUserRule.hideThreads) {
                         thread.row.classList.add('rinsp-thread-filter-dislike');
                         thread.row.classList.add('rinsp-thread-filter-dislike-byuid');
                     }
                 }
-                const dislikeMatches = dislikePatternMatcher !== null ? dislikePatternMatcher.match(matchableTitle) : NO_MATCHES;
+                const dislikeMatches = dislikePatternMatcher != null ? dislikePatternMatcher.match(matchableTitle) : NO_MATCHES;
                 if (blockedByTid || dislikeMatches.size > 0) {
                     thread.row.classList.add('rinsp-thread-filter-dislike');
                     // tid and keyword blocks are independent now, so a thread hit by both shows both chips
@@ -11278,12 +11296,12 @@ async function init() {
                     if (unblockable) {
                         thread.row.classList.add('rinsp-thread-filter-bypass');
                     } else if (userConfig.customUserBypassThreadFilter) {
-                        if (userConfig.customUserHashIdMappings['#' + thread.op] !== null) {
+                        if (userConfig.customUserHashIdMappings['#' + thread.op] != null) {
                             thread.row.classList.add('rinsp-thread-filter-bypass');
                         }
                     }
                 }
-                const likeMatches = likePatternMatcher !== null ? likePatternMatcher.match(matchableTitle) : NO_MATCHES;
+                const likeMatches = likePatternMatcher != null ? likePatternMatcher.match(matchableTitle) : NO_MATCHES;
                 if (likedByTid || likeMatches.size > 0) {
                     thread.row.classList.add('rinsp-thread-filter-like');
 
@@ -11296,7 +11314,7 @@ async function init() {
                         if (isGF) {
                             userPinArea.addLocationHighlight(0, '💚:' + shortLabel);
                         } else {
-                            const label = userConfig.showFavThreadFloatingList$withTitle ? shortLabel + ' - ' + thread.title : shortLabel;
+                            let label = userConfig.showFavThreadFloatingList$withTitle ? shortLabel + ' - ' + thread.title : shortLabel;
                             userPinArea.addLocationHighlight(null, '💚:' + label, thread.row, `/read.php?tid-${thread.tid}.html`);
                         }
                     }
@@ -11356,7 +11374,7 @@ async function init() {
     }
 
     async function applyThreadListEnhancement(myUserId, userConfig, threadList, threadFilter, userFilter, userPinArea, shareTypeFilter, settlementPostMatcher, threadHistoryAccess, updateCallback, fresh) {
-        if (DEBUG_MODE) {console.info('thread-list', threadList);}
+        if (DEBUG_MODE) console.info('thread-list', threadList);
 
         const executors = [
             initScoredThreadFilterExecutor(),
@@ -11389,12 +11407,12 @@ async function init() {
         }
 
         userPinArea.clearState();
-        for (const executor of executors) {
+        for (let executor of executors) {
             if (typeof executor.runBatch === 'function') {
                 await executor.runBatch(newThreadList);
             } else {
                 const awaits = [];
-                for (const thread of newThreadList) {
+                for (let thread of newThreadList) {
                     const returnValue = executor.run(thread);
                     if (returnValue instanceof Promise) {
                         awaits.push(returnValue);
@@ -11451,8 +11469,8 @@ function getForumUserBlacklist() {
     const banAvatars = new Set();
     try {
         const data = JSON.parse(localStorage.config||'{}');
-        for (const entry of Object.entries(data.blist||{})) {
-            for (const mode of entry[1].level||[]) {
+        for (let entry of Object.entries(data.blist||{})) {
+            for (let mode of entry[1].level||[]) {
                 if (mode === 'topic') {
                     banPosts.add(entry[0] * 1);
                 } else if (mode === 'avatar') {
@@ -11460,7 +11478,7 @@ function getForumUserBlacklist() {
                 }
             }
         }
-    } catch  {}
+    } catch (ex) {}
     const data = {
         banPosts, banAvatars
     };
@@ -11480,7 +11498,7 @@ function isUserBlacklisted(userFilter, uid) {
 
 function getPosts(doc, max) {
     const tidRefLink = doc.querySelector('#td_tpc .tiptop .fr a[href^="read.php?tid-"], th[id^="td_"] .tiptop .fr a[href^="read.php?tid-"]');
-    if (tidRefLink === null) {
+    if (tidRefLink == null) {
         return [];
     }
     const tid = Number.parseInt(tidRefLink.getAttribute('href').substring(13));
@@ -11507,11 +11525,11 @@ function getPosts(doc, max) {
 
     const posts = [];
     doc.querySelectorAll('th.r_one[id^=td_] .tpc_content > div[id^="read_"]').forEach(function(contentElem) {
-        if (max !== null && posts.length >= max) {
+        if (max != null && posts.length >= max) {
             return;
         }
         const rootElem = contentElem.closest('.t2.t5 > table');
-        if (rootElem === null) {
+        if (rootElem == null) {
             return;
         }
         const mainCell = contentElem.closest('th.r_one[id^=td_]');
@@ -11530,9 +11548,9 @@ function getPosts(doc, max) {
             }
         }
 
-        const postDefaultHidden = rootElem.parentNode.getAttribute('hidden') !== null;
+        const postDefaultHidden = rootElem.parentNode.getAttribute('hidden') != null;
         const puremarkContent = rootElem.querySelector('.tiptop > .js-puremark-content');
-        const postCollapsed = puremarkContent !== null && (puremarkContent.getAttribute('style')||'').match(/\bdisplay *: *none(?:;|\b)/) === null;
+        const postCollapsed = puremarkContent != null && (puremarkContent.getAttribute('style')||'').match(/\bdisplay *: *none(?:;|\b)/) == null;
 
         const postEid = contentElem.getAttribute('id');
         const postId = postEid.split('_')[1] * 1;
@@ -11552,7 +11570,7 @@ function getPosts(doc, max) {
             userPicElem: userPic,
             defaultUserPic,
             postDefaultHidden,
-            contentDefaultIgnorable: puremarkContent !== null,
+            contentDefaultIgnorable: puremarkContent != null,
             postCollapsed
         };
         posts.push(post);
@@ -11569,14 +11587,16 @@ function readThreadList() {
         divider.classList.add('rinsp-thread-section-divider');
         prefixSelector = '.rinsp-thread-section-divider ~ ';
         let row = divider.previousElementSibling;
-        while (row !== null && row.classList.contains('t_one')) {
+        while (row != null && row.classList.contains('t_one')) {
             const elem = row.querySelector('td[id^="td_"] > h3 > a[href^="read.php?tid-"]');
-            if (elem && elem.closest('td').querySelector('a.s8[href^="thread.php?fid-"]') !== null) {
+            if (elem && elem.closest('td').querySelector('a.s8[href^="thread.php?fid-"]') != null) {
                 collect(elem);
             }
             row = row.previousElementSibling;
         }
         threadList.reverse();
+    } else {
+        divider = null;
     }
     document.querySelectorAll(prefixSelector + '.t_one > td[id^="td_"] > h3 > a[href^="read.php?tid-"], .rinsp-infscroll-divider ~ tbody .t_one > td[id^="td_"] > h3 > a[href^="read.php?tid-"], .spp-infinite-scroll-divider ~ tbody .t_one > td[id^="td_"] > h3 > a[href^="read.php?tid-"]').forEach(elem => {
         collect(elem);
@@ -11780,7 +11800,7 @@ function getEffectiveTextContent(rootNode, preferTextOnly, treatAllEmojiTheSameW
                 }
             }
         }
-        if (endContent !== null) {
+        if (endContent != null) {
             contentList.push(endContent);
         }
     }
@@ -11863,9 +11883,9 @@ function applyHookDirectives(posts, myUserId, userConfig) {
         const prefix = hook.getAttribute('sparg-prefix')||'';
         const length = hook.getAttribute('sparg-length') * 1 || 6;
         const hashNum = cyrb53(prefix + myUserId);
-        let hashStr = btoa(hashNum).replace(/[+/=]/g, '').split('').reverse().join('');
+        let hashStr = btoa(hashNum).replace(/[\+\/=]/g, '').split('').reverse().join('');
         while (hashStr.length < length) {
-            hashStr += hashStr;
+            hashStr = hashStr + hashStr;
         }
         hook.textContent = hashStr.substring(0, length).toUpperCase();
     }
@@ -11911,10 +11931,10 @@ function applyReplyRefreshFree(tid, lastPost, myUserId, onReplied) {
         }
     }
     const replyForm = document.FORM;
-    if (replyForm === null || replyForm.getAttribute('action') !== 'post.php?') {
+    if (replyForm == null || replyForm.getAttribute('action') !== 'post.php?') {
         return;
     }
-    if (replyForm.getAttribute('onsubmit') === null) {
+    if (replyForm.getAttribute('onsubmit') == null) {
         return;
     }
     
@@ -11977,7 +11997,7 @@ function applyReplyRefreshFree(tid, lastPost, myUserId, onReplied) {
         if (onLastPage) {
             const newDoc = await fetchGetPage(lastPageUrl);
             const knownLastPost = newDoc.querySelector(`#td_${lastPostId||'tpc'}`);
-            if (knownLastPost === null) {
+            if (knownLastPost == null) {
                 document.location.href = lastPageUrl;
                 return;
             }
@@ -11990,14 +12010,14 @@ function applyReplyRefreshFree(tid, lastPost, myUserId, onReplied) {
                     row = row.nextElementSibling;
                 }
             }
-            while ((row = row.nextElementSibling) !== null) {
+            while ((row = row.nextElementSibling) != null) {
                 newRows.push(row.outerHTML);
                 if (row.querySelector(`.user-pic a[href="u.php?action-show-uid-${myUserId}.html"]`)) {
                     myNewPostIdAttr = row.querySelector('th[id^="td_"]').getAttribute('id');
                 }
             }
 
-            if (myNewPostIdAttr === null) {
+            if (myNewPostIdAttr == null) {
                 // can't find new post, just load last page instead
                 document.location.href = lastPageUrl;
                 return;
@@ -12024,7 +12044,7 @@ function applyReplyRefreshFree(tid, lastPost, myUserId, onReplied) {
                 if (unsafeWindow.newAtt) { // attachment might be disabled, check if handler exists first
                     unsafeWindow.newAtt.create();
                 }
-            } catch  {}
+            } catch (ignore) {}
 
         } else {
             document.location.href = lastPageUrl;
@@ -12048,7 +12068,7 @@ function applySubjectLineEnhancement(posts, userConfig) {
     let pageSize = 0;
     if (currentPage === 1) {
         if (maxPage > currentPage) {
-            for (const child of form.children) {
+            for (let child of form.children) {
                 if (child.matches('.rinsp-infscroll-divider')) {
                     break;
                 }
@@ -12061,14 +12081,14 @@ function applySubjectLineEnhancement(posts, userConfig) {
         pageSize = posts[0].floor / (currentPage - 1);
     }
     function getFloorTarget(targetFloor) {
-        const targetElem = posts.filter(post => post.floor === targetFloor).map(post => post.rootElem)[0];
-        const targetPage = pageSize === 0 ? 1 : Math.floor(targetFloor / pageSize)+1;
-        const hash = targetFloor > 0 ? `#fl-${targetFloor}` : '';
+        let targetElem = posts.filter(post => post.floor === targetFloor).map(post => post.rootElem)[0];
+        let targetPage = pageSize === 0 ? 1 : Math.floor(targetFloor / pageSize)+1;
+        let hash = targetFloor > 0 ? `#fl-${targetFloor}` : '';
         if (targetPage > 1) {
             return { url: `/read.php?tid-${posts[0].tid}-fpage-0-toread--page-${targetPage}.html${hash}`, targetElem };
-        } 
+        } else {
             return { url: `/read.php?tid-${posts[0].tid}.html${hash}`, targetElem };
-        
+        }
     }
 
     posts.forEach(post => {
@@ -12145,12 +12165,12 @@ function applySubjectLineEnhancement(posts, userConfig) {
 
 function getPostMetadata(postContent) {
     const row = postContent.closest('form > .t5.t2');
-    if (row === null) {return null;}
+    if (row == null) return null;
     const link = row.querySelector('.tiptop a[href^="read.php?tid-"]');
     const match = link.getAttribute('href').match(/\?tid-(\d+)(?:-uid-(\d+))?\.html/);
-    const tid = match[1] * 1;
+    let tid = match[1] * 1;
     let uid;
-    if (match[2] === null) {
+    if (match[2] == null) {
         uid = Number.parseInt(link.closest('tr').querySelector('.user-pic a[href^="u.php?action-show-uid-"]').getAttribute('href').substring(22));
     } else {
         uid = match[2] * 1;
@@ -12177,7 +12197,7 @@ function enhanceBuyButtons(userConfig, triggerRefresh) {
         root.classList.add('rinsp-att-sell');
         attLink.addEventListener('click', () => {
             if (attLink.getAttribute('href'))
-                {return;}
+                return;
             attLink.setAttribute('href', href);
         });
     });
@@ -12189,8 +12209,8 @@ function enhanceBuyButtons(userConfig, triggerRefresh) {
         sellFrame.querySelectorAll('.rinsp-sell-relay-button').forEach(btn => btn.remove()); // remove any existing relay button and recreate again
         const relayButton = newElem('input', 'btn btn-danger rinsp-sell-relay-button', { type: 'button' });
         buyButton.parentNode.insertBefore(relayButton, buyButton);
-        const priceMatch = sellFrame.querySelector('.s3').textContent.match(/此帖售价 (\d+) SP币,已有 (\d+) 人购买/);
-        const price = priceMatch[1] * 1;
+        let priceMatch = sellFrame.querySelector('.s3').textContent.match(/此帖售价 (\d+) SP币,已有 (\d+) 人购买/);
+        let price = priceMatch[1] * 1;
         if (userConfig.enhanceSellFrame) {
             if (price === 0) {
                 relayButton.setAttribute('value', '免费');
@@ -12230,7 +12250,7 @@ function enhanceBuyButtons(userConfig, triggerRefresh) {
 
 function executeBackgroundBuy(tpc, triggerRefresh) {
     const pm = getPostMetadata(tpc);
-    if (pm === null) {
+    if (pm == null) {
         return false;
     }
     const {tid, uid, pid} = pm;
@@ -12279,7 +12299,7 @@ function executeBackgroundBuy(tpc, triggerRefresh) {
                 }
             }
             const doc = new DOMParser().parseFromString(html, 'text/html');
-            const purchasedContent = doc.querySelector('#read_' + pid);
+            let purchasedContent = doc.querySelector('#read_' + pid);
             if (purchasedContent) {
                 const oldContent = document.querySelector('#read_' + pid);
                 oldContent.parentNode.replaceChild(purchasedContent, oldContent);
@@ -12304,7 +12324,7 @@ function executeBackgroundBuy(tpc, triggerRefresh) {
 }
 
 function autoCheckReply() {
-    const cb = document.querySelector('form[action="post.php?"] input[name="atc_newrp"]');
+    let cb = document.querySelector('form[action="post.php?"] input[name="atc_newrp"]');
     if (cb) {
         cb.checked = true;
     }
@@ -12338,7 +12358,7 @@ async function addUserPinArea(pinnedUsersConfigAccess, hideInactivePinnedUsers, 
         targetControlBar.insertBefore(spotsBar, targetControlBar.childNodes[0]);
     }
 
-    const updateListeners = [];
+    let updateListeners = [];
     const pinnedUsers = new Map([[0, null]]); // 0 entry marks it out of date
     const localWatchUsers = new Map();
     const locationHighlights = [];
@@ -12359,8 +12379,8 @@ async function addUserPinArea(pinnedUsersConfigAccess, hideInactivePinnedUsers, 
             spotsBar.innerHTML = '';
         }
         function createSpotButton(spot) {
-            const locButton = newElem('a', null, { href: spot.href||'javascript:', target: '_blank' });
-            if (spot.floor !== null) {
+            let locButton = newElem('a', null, { href: spot.href||'javascript:', target: '_blank' });
+            if (spot.floor != null) {
                 const flootLabel = spot.floor === 0 ? 'GF' : '' + spot.floor + 'F';
                 addElem(locButton, 'span', 'rinsp-spot-floor').textContent = flootLabel;
             }
@@ -12371,7 +12391,7 @@ async function addUserPinArea(pinnedUsersConfigAccess, hideInactivePinnedUsers, 
                 evt.preventDefault();
                 let alignment = spot.alignment||'center';
                 if (alignment === 'center') {
-                    const diff = spot.elem.getBoundingClientRect().height - window.screen.availHeight;
+                    let diff = spot.elem.getBoundingClientRect().height - window.screen.availHeight;
                     if (diff > window.screen.availHeight / 3) { // if target is larger than 2/3 of the screen, align top
                         alignment = 'start';
                     }
@@ -12396,7 +12416,7 @@ async function addUserPinArea(pinnedUsersConfigAccess, hideInactivePinnedUsers, 
                 addElem(list, 'b').textContent = '焦点';
                 const dl = addElem(list, 'dl');
                 locationHighlights.forEach(spot => {
-                    const locItem = addElem(dl, 'dt');
+                    let locItem = addElem(dl, 'dt');
                     locItem.appendChild(createSpotButton(spot));
                 });
             }
@@ -12425,9 +12445,9 @@ async function addUserPinArea(pinnedUsersConfigAccess, hideInactivePinnedUsers, 
                         const xc = (x.locations||[]).length;
                         const yc = (y.locations||[]).length;
                         if (xc > yc)
-                            {return -1;}
+                            return -1;
                         if (xc < yc)
-                            {return 1;}
+                            return 1;
                         return timeComparator(x, y);
                     })
                     .forEach(record => {
@@ -12447,7 +12467,7 @@ async function addUserPinArea(pinnedUsersConfigAccess, hideInactivePinnedUsers, 
             const locs = addElem(item, 'dl', 'rinsp-pinuser-item-locs');
 
             const img = addElem(face, 'img', null, { src: record.img });
-            const isDefaultImg = record.img === null || record.img.startsWith('images/face/');
+            const isDefaultImg = record.img == null || record.img.startsWith('images/face/');
             const label = addElem(face, 'div');
             addElem(label, 'a', null, { href: `u.php?action-show-uid-${record.uid}.html`, target: '_blank' }).textContent = record.nickName||`#${record.uid}`;
             const unpin = addElem(label, 'div', 'rinsp-pinuser-unpin-icon');
@@ -12457,9 +12477,9 @@ async function addUserPinArea(pinnedUsersConfigAccess, hideInactivePinnedUsers, 
             const locCount = record.locations ? record.locations.length : 0;
             if (locCount > 0) {
                 const locButtons = [];
-                for (const loc of record.locations) {
-                    const locItem = addElem(locs, 'dt', loc.style ? 'rinsp-pinuser-loc-' + loc.style : null);
-                    const locButton = addElem(locItem, 'a', null, { href: 'javascript:' });
+                for (let loc of record.locations) {
+                    let locItem = addElem(locs, 'dt', loc.style ? 'rinsp-pinuser-loc-' + loc.style : null);
+                    let locButton = addElem(locItem, 'a', null, { href: 'javascript:' });
                     locButton.textContent = loc.label;
                     locButton.addEventListener('click', loc.action);
                     locButtons.push(locButton);
@@ -12520,44 +12540,44 @@ async function addUserPinArea(pinnedUsersConfigAccess, hideInactivePinnedUsers, 
     function guessInterestingContent(text, spotsFilter) {
         const textLower = text.toLowerCase();
         if (spotsFilter.shares) {
-            if (textLower.indexOf('pan.baidu.com/') !== -1) {
+            if (textLower.indexOf('pan.baidu.com/') != -1) {
                 return '📂:分享 (度盘)';
             }
-            if (textLower.indexOf('pan.quark.cn/') !== -1) {
+            if (textLower.indexOf('pan.quark.cn/') != -1) {
                 return '📂:分享 (夸克)';
             }
-            if (textLower.indexOf('/mypikpak.com/s/') !== -1) {
+            if (textLower.indexOf('/mypikpak.com/s/') != -1) {
                 return '📂:分享 (PP)';
             }
-            if (textLower.indexOf('://mega.nz/') !== -1) {
+            if (textLower.indexOf('://mega.nz/') != -1) {
                 return '📂:分享 (MEGA)';
             }
-            if (textLower.indexOf('/drive.google.com/') !== -1) {
+            if (textLower.indexOf('/drive.google.com/') != -1) {
                 return '📂:分享 (谷歌)';
             }
-            if (textLower.indexOf('/1drv.ms/f/s!') !== -1 ||
+            if (textLower.indexOf('/1drv.ms/f/s!') != -1 ||
                 textLower.match(/:\/\/[a-zA-Z-]+\.sharepoint\.com\/:/) ||
-                textLower.indexOf('-my.sharepoint.com/:') !== -1) {
+                textLower.indexOf('-my.sharepoint.com/:') != -1) {
                 return '📂:分享 (OD)';
             }
-            if (textLower.indexOf('.lanzoub.com') !== -1 ||
-                textLower.indexOf('/share.weiyun.com/') !== -1 ||
-                textLower.indexOf('.aliyundrive.com') !== -1 ||
-                textLower.indexOf('.123pan.com/') !== -1 ||
-                textLower.indexOf('pan.xunlei.com/') !== -1 ||
-                textLower.indexOf('cowtransfer.com/s/') !== -1 ||
-                textLower.indexOf('/files.catbox.moe/') !== -1 ||
-                textLower.indexOf('/litter.catbox.moe/') !== -1 ||
-                textLower.indexOf('/pixeldrain.com/l/') !== -1 ||
-                textLower.indexOf('/pixeldrain.com/u/') !== -1 ||
-                textLower.indexOf('/transfer.it/t/') !== -1 ||
-                textLower.indexOf('/gofile.io/d/') !== -1 ||
-                textLower.indexOf('/uploadhaven.com/download/') !== -1 ||
-                textLower.indexOf('/racaty.com/') !== -1 ||
-                textLower.indexOf('.swisstransfer.com/d/') !== -1 ||
-                textLower.indexOf('.gigafile.nu/') !== -1 ||
-                textLower.indexOf('/sakuradrive.com/s/') !== -1 ||
-                textLower.indexOf('/dogpan.com/s/') !== -1) {
+            if (textLower.indexOf('.lanzoub.com') != -1 ||
+                textLower.indexOf('/share.weiyun.com/') != -1 ||
+                textLower.indexOf('.aliyundrive.com') != -1 ||
+                textLower.indexOf('.123pan.com/') != -1 ||
+                textLower.indexOf('pan.xunlei.com/') != -1 ||
+                textLower.indexOf('cowtransfer.com/s/') != -1 ||
+                textLower.indexOf('/files.catbox.moe/') != -1 ||
+                textLower.indexOf('/litter.catbox.moe/') != -1 ||
+                textLower.indexOf('/pixeldrain.com/l/') != -1 ||
+                textLower.indexOf('/pixeldrain.com/u/') != -1 ||
+                textLower.indexOf('/transfer.it/t/') != -1 ||
+                textLower.indexOf('/gofile.io/d/') != -1 ||
+                textLower.indexOf('/uploadhaven.com/download/') != -1 ||
+                textLower.indexOf('/racaty.com/') != -1 ||
+                textLower.indexOf('.swisstransfer.com/d/') != -1 ||
+                textLower.indexOf('.gigafile.nu/') != -1 ||
+                textLower.indexOf('/sakuradrive.com/s/') != -1 ||
+                textLower.indexOf('/dogpan.com/s/') != -1) {
                 return '📂:分享';
             }
             if (textLower.match(/https?:\/\/([a-z0-9]+\.)?[a-z0-9]+\.(com|net|io)\/s\//)) {
@@ -12566,20 +12586,20 @@ async function addUserPinArea(pinnedUsersConfigAccess, hideInactivePinnedUsers, 
             if (textLower.match(/(?:[^a-zA-Z0-9]|^)(?:bafy[a-z0-9]{55}|qm[A-Za-z0-9]{44})(?:[^a-zA-Z0-9]|$)/)) {
                 return '🧲:ipfs';
             }
-            if (textLower.indexOf('magnet:?') !== -1) {
+            if (textLower.indexOf('magnet:?') != -1) {
                 return '🧲:磁链';
             }
-            if (textLower.indexOf('ed2k://') !== -1) {
+            if (textLower.indexOf('ed2k://') != -1) {
                 return '🧲:ed2k';
             }
-            if (textLower.indexOf('thunder://') !== -1) {
+            if (textLower.indexOf('thunder://') != -1) {
                 return '🧲:迅雷';
             }
-            if (textLower.indexOf('/jmj.cc/s/') !== -1 ||
-                textLower.indexOf('.feimaoyun.com/') !== -1 ||
-                textLower.indexOf('/rosefile.net/') !== -1 ||
-                textLower.indexOf('.xun-niu.com/file-') !== -1 ||
-                textLower.indexOf('.xunniu-pan.com/file-') !== -1) {
+            if (textLower.indexOf('/jmj.cc/s/') != -1 ||
+                textLower.indexOf('.feimaoyun.com/') != -1 ||
+                textLower.indexOf('/rosefile.net/') != -1 ||
+                textLower.indexOf('.xun-niu.com/file-') != -1 ||
+                textLower.indexOf('.xunniu-pan.com/file-') != -1) {
                 return '💲:网赚盘';
             }
         }
@@ -12591,9 +12611,9 @@ async function addUserPinArea(pinnedUsersConfigAccess, hideInactivePinnedUsers, 
                 const matches = likePatternMatcher.match(childText.toLowerCase());
                 if (matches.size > 0) {
                     return '💚:' + Array.from(matches)[0];
-                } 
+                } else {
                     return null;
-                
+                }
             });
         }
 
@@ -12619,9 +12639,9 @@ async function addUserPinArea(pinnedUsersConfigAccess, hideInactivePinnedUsers, 
             return;
         }
 
-        const links = post.contentElem.querySelectorAll('a[href]:not(.rinsp-subject-floor-link)');
-        for (const link of links) {
-            const hit = guessInterestingContent(link.getAttribute('href'), spotsFilter);
+        let links = post.contentElem.querySelectorAll('a[href]:not(.rinsp-subject-floor-link)');
+        for (let link of links) {
+            let hit = guessInterestingContent(link.getAttribute('href'), spotsFilter);
             if (hit) {
                 locationHighlights.push({
                     floor: post.floor,
@@ -12633,8 +12653,8 @@ async function addUserPinArea(pinnedUsersConfigAccess, hideInactivePinnedUsers, 
         }
 
         if (spotsFilter.images) {
-            for (const img of post.contentElem.closest('.tpc_content').querySelectorAll('img[src],img[data-rinsp-defer-src]')) {
-                const src = getImgSrc(img);
+            for (let img of post.contentElem.closest('.tpc_content').querySelectorAll('img[src],img[data-rinsp-defer-src]')) {
+                let src = getImgSrc(img);
                 if (src.startsWith('images/')) {
                     continue; // skip default emotions
                 }
@@ -12649,8 +12669,8 @@ async function addUserPinArea(pinnedUsersConfigAccess, hideInactivePinnedUsers, 
                 });
                 return;
             }
-            for (const link of links) {
-                const href = link.getAttribute('href');
+            for (let link of links) {
+                let href = link.getAttribute('href');
                 if (href.match(/\.(png|jpg|jpeg|gif|avif|webp)$/)) {
                     locationHighlights.push({
                         floor: post.floor,
@@ -12696,8 +12716,8 @@ async function addUserPinArea(pinnedUsersConfigAccess, hideInactivePinnedUsers, 
         }
 
         if (spotsFilter.links) {
-            for (const link of links) {
-                if (link.querySelector('img') === null || link.textContent.length > 0) {
+            for (let link of links) {
+                if (link.querySelector('img') == null || link.textContent.length > 0) {
                     locationHighlights.push({
                         floor: post.floor,
                         type: '🔗:链接',
@@ -12710,7 +12730,7 @@ async function addUserPinArea(pinnedUsersConfigAccess, hideInactivePinnedUsers, 
 
         function scanTextualContent(handler) {
             let lastNode = null;
-            for (const childNode of post.contentElem.childNodes) {
+            for (let childNode of post.contentElem.childNodes) {
                 let childText;
                 if (childNode.nodeType === 3) {
                     childText = childNode.textContent.trim();
@@ -12719,7 +12739,7 @@ async function addUserPinArea(pinnedUsersConfigAccess, hideInactivePinnedUsers, 
                     lastNode = childNode;
                 }
                 if (childText) {
-                    const hit = handler(childText, spotsFilter);
+                    let hit = handler(childText, spotsFilter);
                     if (hit) {
                         if (lastNode) {
                             locationHighlights.push({
@@ -12768,15 +12788,15 @@ async function addUserPinArea(pinnedUsersConfigAccess, hideInactivePinnedUsers, 
                     nickName: record.nickName,
                     img: record.img
                 };
-            } 
+            } else {
                 return null;
-            
+            }
         },
         isWatching(uid) {
             return pinnedUsers.has(uid) || localWatchUsers.has(uid);
         },
         clearState() {
-            for (const record of pinnedUsers.values()) {
+            for (let record of pinnedUsers.values()) {
                 record.locations = [];
             }
             localWatchUsers.clear();
@@ -12784,7 +12804,7 @@ async function addUserPinArea(pinnedUsersConfigAccess, hideInactivePinnedUsers, 
         },
         addLocation(uid, label, locClass, action) {
             let record = pinnedUsers.get(uid);
-            if (record === null) {
+            if (record == null) {
                 record = localWatchUsers.get(uid);
             }
             if (record) {
@@ -12807,7 +12827,7 @@ async function addUserPinArea(pinnedUsersConfigAccess, hideInactivePinnedUsers, 
     };
 }
 
-const TITLE_SPLIT_PATTERN = /[\u3000-\u303F（）/:,\s[\]{}()\\/<>\u00A0➕+]+|(?<![妙秒喵])[轉传]|原档|原檔|分享|下载|下載|长期|長期|直[链连連]接?|(?<![妙秒喵])[链连連]接?|[网網云雲][盘盤]|[盘盤云雲]|有效期?|(?<![0-9a-z])\d+(?:\.\d{1,2})?(?:[GMKT](?:i?B)?)|(?<![0-9a-z])\d{1,3}(?:[日天]|个?月)/i;
+const TITLE_SPLIT_PATTERN = /[\u3000-\u303F（）/:,\s\[\]\{\}\(\)\\\/<>\u00A0➕\+]+|(?<![妙秒喵])[轉传]|原档|原檔|分享|下载|下載|长期|長期|直[链连連]接?|(?<![妙秒喵])[链连連]接?|[网網云雲][盘盤]|[盘盤云雲]|有效期?|(?<![0-9a-z])\d+(?:\.\d{1,2})?(?:[GMKT](?:i?B)?)|(?<![0-9a-z])\d{1,3}(?:[日天]|个?月)/i;
 const SHARE_TYPES = [
     {
         name: '度盘',
@@ -12902,7 +12922,7 @@ const SHARE_TYPES_MIXED_SPLIT_PATTERNS = /(bd|od|gd|mg)/i;
 const SHARE_UNKNOWN_NAME = '不明';
 
 async function addShareTypeFilterArea(target, sharetypeFilterConfigAccess) {
-    const updateListeners = [];
+    let updateListeners = [];
     const controlBlock = addElem(target, 'div', 'rinsp-sharetype-filter');
     const states = new Map();
     const sharetypeFilterConfig = await sharetypeFilterConfigAccess.read();
@@ -12972,8 +12992,8 @@ async function addShareTypeFilterArea(target, sharetypeFilterConfigAccess) {
             const parts = title.split(TITLE_SPLIT_PATTERN);
             parts.push(title);
             nextpart:
-            for (const part of parts) {
-                for (const shareTypeDef of SHARE_TYPES) {
+            for (let part of parts) {
+                for (let shareTypeDef of SHARE_TYPES) {
                     if (part.match(shareTypeDef.pattern)) {
                         shares.add(shareTypeDef.name);
                         continue nextpart;
@@ -12989,7 +13009,7 @@ async function addShareTypeFilterArea(target, sharetypeFilterConfigAccess) {
                         }
                         nextsubpart:
                         for (let i = 1; i < splits.length; i += 2) {
-                            for (const shareTypeDef of SHARE_TYPES) {
+                            for (let shareTypeDef of SHARE_TYPES) {
                                 if (splits[i].match(shareTypeDef.pattern)) {
                                     shares.add(shareTypeDef.name);
                                     continue nextsubpart;
@@ -13018,21 +13038,21 @@ async function addShareTypeFilterArea(target, sharetypeFilterConfigAccess) {
 }
 
 function readEnhanceUserInfoMap(myUserId, userConfig) {
-    const map = new Map();
+    let map = new Map();
     document.querySelectorAll('.r_two .user-info > .user-infoWrap > .c + .f12').forEach(function(uidCell) {
-        const uid = uidCell.textContent.trim() * 1;
+        let uid = uidCell.textContent.trim() * 1;
         const img = uidCell.closest('.r_two').querySelector(`.user-pic a[href="u.php?action-show-uid-${uid}.html"] > img`);
         let imgSrc = null;
         if (img) {
             imgSrc = getImgSrc(img);
         }
-        const infoWrap = uidCell.closest('.user-infoWrap');
-        const infoText = infoWrap.textContent;
-        const nickName = ((infoText.match(/\s昵称: *([^\r\n]+)在线时间/)||[])[1]||'').trim()||'';
-        const unnamed = !!infoText.match(/昵称:\s*在线时间/);
+        let infoWrap = uidCell.closest('.user-infoWrap');
+        let infoText = infoWrap.textContent;
+        let nickName = ((infoText.match(/\s昵称: *([^\r\n]+)在线时间/)||[])[1]||'').trim()||'';
+        let unnamed = !!infoText.match(/昵称:\s*在线时间/);
 
-        const m = infoText.match(/\s发帖: (\d+)\s+HP: (-?\d+) 点\s+SP币: (-?\d+) G\s+.*\s+在线时间: (\d+)\(小时\)\s+注册时间: (\d{4}-\d{2}-\d{2})\s*最后登录: (\d{4}-\d{2}-\d{2})\s/);
-        const data = {
+        let m = infoText.match(/\s发帖: (\d+)\s+HP: (-?\d+) 点\s+SP币: (-?\d+) G\s+.*\s+在线时间: (\d+)\(小时\)\s+注册时间: (\d{4}-\d{2}-\d{2})\s*最后登录: (\d{4}-\d{2}-\d{2})\s/);
+        let data = {
             post: m[1] * 1,
             hp: m[2] * 1,
             sp: m[3] * 1,
@@ -13045,7 +13065,7 @@ function readEnhanceUserInfoMap(myUserId, userConfig) {
         };
         map.set(uid, data);
 
-        if (userConfig.useCustomUserInfoPopup && infoWrap.querySelector('.listread > .rinsp-user-popup-action-list') === null) {
+        if (userConfig.useCustomUserInfoPopup && infoWrap.querySelector('.listread > .rinsp-user-popup-action-list') == null) {
             const actionList = infoWrap.querySelector('.listread > ul');
             const actionItems = actionList.querySelectorAll('li');
             const newActionList = addElem(actionList.parentElement, 'ul', 'rinsp-user-popup-action-list');
@@ -13100,7 +13120,7 @@ function getCurrentPageFid() {
 function showAutoSpTaskStatus(myUserId, userConfig, mainConfigAccess) {
 
     const headCell = Array.from(document.querySelectorAll('td > .t > table td.h[colspan="4"]')).filter(el => el.textContent === '社区论坛任务')[0];
-    if (headCell === null) {
+    if (headCell == null) {
         return;
     }
     const block = headCell.closest('.t').closest('td');
@@ -13208,8 +13228,8 @@ function autoCompleteSpTasks(myUserId) {
     }
     
     async function scanAndRunAllTasks(doc, selector, actionType) {
-        const completed = [];
-        for (const taskButton of doc.querySelectorAll(selector)) {
+        let completed = [];
+        for (let taskButton of doc.querySelectorAll(selector)) {
             const rewardMatch = taskButton.closest('td').previousElementSibling.textContent.match(/奖励 : SP币 (\d+) G/);
             const sp = rewardMatch ? rewardMatch[1] * 1 : 0;
             const jobId = Number.parseInt(taskButton.getAttribute('onclick').substring(10));
@@ -13313,11 +13333,11 @@ function addSectionFilter(baseAreaMap, userId, filterHandler, options) {
     let defaultFilterItem = null;
     try {
         const lastState = JSON.parse(localStorage.getItem(LAST_AREA_FILTER_MEMORY_KEY) || 'null');
-        if (lastState !== null && lastState.key === basePageKey) {
+        if (lastState != null && lastState.key === basePageKey) {
             areaMap.set(lastState.fid, lastState.areaName);
             defaultFid = lastState.fid;
         }
-    } catch  {}
+    } catch (ex) {}
 
     const sidePanel = document.querySelector('#u-contentside');
     sidePanel.querySelectorAll('.rinsp-area-filter-panel').forEach(el => el.remove());
@@ -13422,7 +13442,7 @@ function addSectionFilter(baseAreaMap, userId, filterHandler, options) {
 
 async function enhanceFrontPage(userConfig, mainConfigAccess) {
     const cell = document.querySelector('#main > .t > table > tbody > .tr2 > td:last-child > .b');
-    if (cell === null || cell.textContent !== '提问求物') {
+    if (cell == null || cell.textContent !== '提问求物') {
         return;
     }
     const tbody = cell.closest('tbody');
@@ -13450,7 +13470,7 @@ async function enhanceFrontPage(userConfig, mainConfigAccess) {
             .finally(() => update(collapsed));
     });
 
-    const targets = {
+    let targets = {
         '最新讨论': '/thread.php?fid=9&page=1',
         '最新回复': '/thread.php?fid-9.html',
         '同人音声': '/thread.php?fid-128.html',
@@ -13459,7 +13479,7 @@ async function enhanceFrontPage(userConfig, mainConfigAccess) {
 
     tbody.querySelectorAll('.tr2 > td > .b').forEach(el => {
         const label = el.textContent.trim();
-        const target = targets[label];
+        let target = targets[label];
         if (target) {
             el.textContent = '';
             addElem(el, 'a', null, { href: target }).textContent = label;
@@ -13469,7 +13489,7 @@ async function enhanceFrontPage(userConfig, mainConfigAccess) {
 
 const cachedLastAccessRecords = new Map();
 async function enrichThreadTitle(tid, tLink, myUserId, userConfig, threadHistoryAccess) {
-    if (threadHistoryAccess === null) {
+    if (threadHistoryAccess == null) {
         return;
     }
     let prefix;
@@ -13529,12 +13549,12 @@ async function enrichThreadTitle(tid, tLink, myUserId, userConfig, threadHistory
     
         } else if (fromCache) {
             // skip modification
-        } else if (tLink.textContent.endsWith(' ..') && tLink.parentElement.querySelector('.rinsp-thread-populate-button') === null) {
+        } else if (tLink.textContent.endsWith(' ..') && tLink.parentElement.querySelector('.rinsp-thread-populate-button') == null) {
             const expander = newElem('a', 'rinsp-thread-populate-button', { href: 'javascript:'} );
             expander.textContent = '展开';
             tLink.parentElement.insertBefore(expander, tLink.nextElementSibling);
             expander.addEventListener('click', async () => {
-                if (expander.getAttribute('href') === null) {
+                if (expander.getAttribute('href') == null) {
                     return;
                 }
                 expander.removeAttribute('href');
@@ -13546,7 +13566,7 @@ async function enrichThreadTitle(tid, tLink, myUserId, userConfig, threadHistory
                         tLink.textContent = updatedAccessRecord.title;
                     }
                     expander.remove();
-                } catch  {
+                } catch (e) {
                     expander.textContent = '⚠️';
                 }
             });
@@ -13571,7 +13591,7 @@ function isNumeric(c) {
 }
 
 function createKeywordMatcherFactory(keywords) {
-    if (keywords === null || keywords.length === 0) {
+    if (keywords == null || keywords.length === 0) {
         return null;
     }
     const exp = keywords
@@ -13590,7 +13610,7 @@ function createKeywordMatcherFactory(keywords) {
                         return null;
                     }
                     return exp;
-                } catch  {
+                } catch (e) {
                     console.info(`[rin+] invalid regex entry: ${s}`);
                     return null;
                 }
@@ -13603,9 +13623,9 @@ function createKeywordMatcherFactory(keywords) {
                 exp = '(?<=[^0-9]|^)' + exp;
             }
             if (isAlpha(term[term.length - 1])) {
-                exp += '(?=[^a-z]|$)';
+                exp = exp + '(?=[^a-z]|$)';
             } else if (isNumeric(term[term.length - 1])) {
-                exp += '(?=[^0-9]|$)';
+                exp = exp + '(?=[^0-9]|$)';
             }
             return exp;
         })
@@ -13618,20 +13638,20 @@ function createKeywordMatcherFactory(keywords) {
     let pattern;
     try {
         pattern = new RegExp(exp, 'gi');
-    } catch  {
-        if (DEV_MODE) {console.warn('invalid-regexp: ' + exp);}
+    } catch (ex) {
+        if (DEV_MODE) console.warn('invalid-regexp: ' + exp);
         return null;
     }
     return {
         isStaticKeyword(word) {
-            return keywords.indexOf(word) !== -1;
+            return keywords.indexOf(word) != -1;
         },
         match(text) {
             pattern.lastIndex = 0;
             const matches = new Set();
             while (true) {
                 const match = pattern.exec(text);
-                if (match === null) {
+                if (match == null) {
                     break;
                 }
                 if (match[0].length === 0) {
@@ -13651,7 +13671,7 @@ async function openCustomThreadCategoryEditor(threadCategoryConfigAccess, callba
         title: '自定分类词列表',
         description: `每行一个关键字
 正则表达式高级设置 (懂的都懂 不懂可无视) 格式: regex:/正则表达式语法/
-  例子: regex:/[东南西北]+/`,
+  例子: regex:/[东南西北]\+/`,
         async read() {
             const customConfig = await threadCategoryConfigAccess.read();
             return customConfig.keywords.sort().join('\n');
@@ -13695,7 +13715,7 @@ function enhanceTopicPostListDisplay(userId, myUserId, userConfig, threadHistory
         if (activeKeyword) {
             const activeTids = threadsByKeywords.get(activeKeyword);
             threadsById.forEach((row, tid) => {
-                if (activeTids !== null && activeTids.has(tid)) {
+                if (activeTids != null && activeTids.has(tid)) {
                     row.classList.remove('rinsp-category-hide');
                 } else {
                     row.classList.add('rinsp-category-hide');
@@ -13711,11 +13731,11 @@ function enhanceTopicPostListDisplay(userId, myUserId, userConfig, threadHistory
     async function apply() {
 
         let keywordPatternMatcher = null;
-        const keywordCaseMappings = new Map();
+        let keywordCaseMappings = new Map();
         const threadCategoryConfig = await threadCategoryConfigAccess.read();
         if (threadCategoryConfig.keywords.length > 0) {
-            const keywords = threadCategoryConfig.keywords.map(kw => {
-                const lower = kw.toLowerCase();
+            let keywords = threadCategoryConfig.keywords.map(kw => {
+                let lower = kw.toLowerCase();
                 keywordCaseMappings.set(lower, kw);
                 return lower;
             });
@@ -13731,7 +13751,7 @@ function enhanceTopicPostListDisplay(userId, myUserId, userConfig, threadHistory
             const tid = Number.parseInt(el.getAttribute('href').substring(13));
             threadsById.set(tid, row);
 
-            if (cell.querySelector('.rinsp-gf-link') === null) {
+            if (cell.querySelector('.rinsp-gf-link') == null) {
                 const gfLink = newElem('a', 'rinsp-gf-link', {
                     href: `read.php?tid-${tid}-uid-${userId}.html`,
                     target: '_blank'
@@ -13750,9 +13770,9 @@ function enhanceTopicPostListDisplay(userId, myUserId, userConfig, threadHistory
             if (keywordPatternMatcher) {
                 const threadTitle = el.textContent;
                 const matches = keywordPatternMatcher.match(threadTitle.toLowerCase());
-                for (const keyword of matches) {
+                for (let keyword of matches) {
                     let threadSet = threadsByKeywords.get(keyword);
-                    if (threadSet === null) {
+                    if (threadSet == null) {
                         threadSet = new Set();
                         threadsByKeywords.set(keyword, threadSet);
                     }
@@ -13793,14 +13813,14 @@ function enhanceTopicPostListDisplay(userId, myUserId, userConfig, threadHistory
     }
 
     async function updateHistoryCheck() {
-        if (threadHistoryAccess === null || hideVisitedThreadToggler === null)
-            {return;}
+        if (threadHistoryAccess == null || hideVisitedThreadToggler == null)
+            return;
         let visitedCount = 0;
         const tids = Array.from(threadsById.keys());
         const lastSeenRecords = await threadHistoryAccess.historyStore.getBatch(tids);
         lastSeenRecords.forEach((record, i) => {
             const row = threadsById.get(tids[i]);
-            if (record !== null) {
+            if (record != null) {
                 row.classList.add('rinsp-thread-visited');
                 visitedCount++;
             }
@@ -13834,11 +13854,11 @@ function enhanceTopicPostListDisplay(userId, myUserId, userConfig, threadHistory
 
 async function enhanceReplyPostListDisplay(userId, myUserId, userConfig, userPinArea, mainConfigAccess, threadHistoryAccess, hideVisitedThreadToggler) {
     const firstItem = document.querySelector('#u-contentmain .u-table tr > th > a[href^="job.php?action-topost-tid-"]');
-    if (firstItem === null) {
+    if (firstItem == null) {
         return;
     }
     let userReplyListFolded = userConfig.userReplyListFolded;
-    const accessUpdaters = [];
+    let accessUpdaters = [];
     function registerEnrichThreadTitle(tid, elem) {
         if (threadHistoryAccess) {
             const action = () => enrichThreadTitle(tid, elem, myUserId, userConfig, threadHistoryAccess);
@@ -13886,7 +13906,7 @@ async function enhanceReplyPostListDisplay(userId, myUserId, userConfig, userPin
             const map = new Map();
             dataItems.forEach(item => {
                 let group = map.get(item.tid);
-                if (group === null) {
+                if (group == null) {
                     group = [];
                     map.set(item.tid, group);
                     groupedItems.push(group);
@@ -13962,7 +13982,7 @@ async function enhanceReplyPostListDisplay(userId, myUserId, userConfig, userPin
                     return;
                 }
                 registerEnrichThreadTitle(postRef.tid, el);
-                if (cell.querySelector('.rinsp-gf-link') === null) {
+                if (cell.querySelector('.rinsp-gf-link') == null) {
                     const gfLink = newElem('a', 'rinsp-gf-link', {
                         href: `read.php?tid-${postRef.tid}-uid-${userId}.html#${postRef.pid}`,
                         target: '_blank'
@@ -13976,7 +13996,7 @@ async function enhanceReplyPostListDisplay(userId, myUserId, userConfig, userPin
                 setAreaScoped(row, fid);
                 areaMap.set(fid, fidLink.textContent.trim());
                 let rows = threadsById.get(postRef.tid);
-                if (rows === null) {
+                if (rows == null) {
                     rows = [];
                     threadsById.set(postRef.tid, rows);
                 }
@@ -13998,7 +14018,7 @@ async function enhanceReplyPostListDisplay(userId, myUserId, userConfig, userPin
             addElem(modeSelect, 'option', null, { value: '' }).textContent = '一般';
             addElem(modeSelect, 'option', null, { value: 'folding' }).textContent = '折叠式';
             modeSelect.value = userReplyListFolded ? 'folding' : '';
-            modeSelect.value ||= '';
+            modeSelect.value = modeSelect.value || '';
             modeSelect.addEventListener('change', () => {
                 modeSelect.disabled = true;
                 mainConfigAccess.update(function(updatingUserConfig) {
@@ -14015,13 +14035,13 @@ async function enhanceReplyPostListDisplay(userId, myUserId, userConfig, userPin
     }
 
     async function updateHistoryCheck() {
-        if (threadHistoryAccess === null || hideVisitedThreadToggler === null)
-            {return;}
+        if (threadHistoryAccess == null || hideVisitedThreadToggler == null)
+            return;
         let visitedCount = 0;
         const tids = Array.from(threadsById.keys());
         const lastSeenRecords = await threadHistoryAccess.historyStore.getBatch(tids);
         lastSeenRecords.forEach((record, i) => {
-            if (record !== null) {
+            if (record != null) {
                 const rows = threadsById.get(tids[i]);
                 rows.forEach(row => row.classList.add('rinsp-thread-visited'));
                 visitedCount++;
@@ -14058,7 +14078,7 @@ async function enhanceReplyPostListDisplay(userId, myUserId, userConfig, userPin
     function getPostRef(postUrl) {
         const match = postUrl.match(/-tid-(\d+)-pid-(\d+)\.html$/);
         if (!match)
-            {return null;}
+            return null;
         return {
             tid: match[1] * 1,
             pid: match[2] * 1,
@@ -14085,12 +14105,12 @@ function updateFavorRecords(favorThreadsCacheAccess) {
 }
 
 async function readFavorRecords(favorThreadsCacheAccess, fresh, noupdate) {
-    const cached = fresh ? null : await favorThreadsCacheAccess.read();
+    let cached = fresh ? null : await favorThreadsCacheAccess.read();
     const now = Date.now();
-    if (cached === null || cached.time > now || (now - cached.time) > 79200000) { // older than 22 hours
+    if (cached == null || cached.time > now || (now - cached.time) > 79200000) { // older than 22 hours
         const doc = await fetchGetPage(`${document.location.origin}/u.php?action-favor.html`, null, true);
         const errorMessage = findErrorMessage(doc);
-        if (errorMessage !== null || doc.querySelector('#u-contentmain') === null) {
+        if (errorMessage != null || doc.querySelector('#u-contentmain') == null) {
             throw new Error(errorMessage || '不明错误');
         }
         const favors = readFavorList(doc);
@@ -14102,9 +14122,9 @@ async function readFavorRecords(favorThreadsCacheAccess, fresh, noupdate) {
             await favorThreadsCacheAccess.write(cacheItem);
         }
         return favors;
-    } 
+    } else {
         return cached.data;
-    
+    }
 }
 
 async function enhancePostListUserDisplay(action, userId, myUserId, userConfig, userPinArea) {
@@ -14200,7 +14220,7 @@ function createMutationObserver(callback) {
     let running = false;
     let rerunRequested = false;
     function schedule() {
-        if (updateSchedule === null) {
+        if (updateSchedule == null) {
             updateSchedule = setTimeout(function() {
                 updateSchedule = null;
                 running = true;
@@ -14217,8 +14237,8 @@ function createMutationObserver(callback) {
     }
     // mutations while scheduled or running are ignored: they include the callback's own DOM writes
     const observer = new MutationObserver(function(e) {
-        const skipped = running || updateSchedule !== null;
-        if (DEBUG_MODE) {console.info(skipped ? 'skipped-mutation' : 'mutation');}
+        const skipped = running || updateSchedule != null;
+        if (DEBUG_MODE) console.info(skipped ? 'skipped-mutation' : 'mutation');
         if (skipped) {
             return;
         }
@@ -14271,7 +14291,7 @@ function addFriendListPaginator(uid, queryParams) {
             addElem(addElem(ul, 'li'), 'a', null, { href: pageUrl(curPage + 1), style: 'font-weight:bold' }).textContent = '»';
         }
         const one = addElem(ul, 'li', 'pagesone');
-        one.textContent = `Pages: ${curPage}\u00a0 \u00a0 \u00a0Go `;
+        one.textContent = `Pages: ${curPage}     Go `;
         const input = addElem(one, 'input', null, { type: 'text', size: '3' });
         input.addEventListener('keydown', ev => {
             if (ev.keyCode === 13) {
@@ -14326,7 +14346,7 @@ function renderVisitHistoryPage(myUserId, userConfig, threadHistoryAccess) {
     const mainPane = document.querySelector('#u-content > #u-contentmain');
     const sidePane = document.querySelector('#u-content > #u-contentside');
     sidePane.innerHTML = '';
-    if (threadHistoryAccess === null) {
+    if (threadHistoryAccess == null) {
         mainPane.innerHTML = '<div style="padding:16px 30px">💡 请先启用🗞️帖子记录功能</div>';
         return;
     }
@@ -14391,7 +14411,7 @@ function renderVisitHistoryPage(myUserId, userConfig, threadHistoryAccess) {
             const terms = filterInput.value.toLowerCase().trim().split(/\s+/g);
             const thisFilterString = terms.join(' ');
             if (filterChangeOnly && lastFilterString === thisFilterString)
-                {return;}
+                return;
             lastFilterString = thisFilterString;
             statusCell.textContent = '';
 
@@ -14444,7 +14464,7 @@ function renderVisitHistoryPage(myUserId, userConfig, threadHistoryAccess) {
             selectedRecords.slice(0, limit).forEach(record => {
                 const row = addElem(tbody, 'tr');
                 const th = addElem(row, 'th');
-                addElem(row, 'td');
+                const td = addElem(row, 'td');
                 setAreaScoped(row, record.fid);
 
                 const status = addElem(th, 'span', 'rinsp-thread-status-icons');
@@ -14477,7 +14497,7 @@ function renderVisitHistoryPage(myUserId, userConfig, threadHistoryAccess) {
                         const userLink = addElem(uidBlock, 'a', 'rinsp-owner-isme', { href: `u.php?uid-${record.uid}.html`, target: '_blank' });
                         userLink.textContent = MY_NAME_DISPLAY;
                     } else {
-                        const customNameEntry = userConfig.customUserHashIdMappings['#' + record.uid];
+                        let customNameEntry = userConfig.customUserHashIdMappings['#' + record.uid];
                         if (customNameEntry) {
                             const userLink = addElem(uidBlock, 'a', 'rinsp-owner-isknown', { href: `u.php?uid-${record.uid}.html`, target: '_blank' });
                             userLink.textContent = customNameEntry[2];
@@ -14500,12 +14520,12 @@ function renderVisitHistoryPage(myUserId, userConfig, threadHistoryAccess) {
 
         let enqueueTimer = null;
         filterInput.addEventListener('keyup', () => {
-            if (enqueueTimer) {clearTimeout(enqueueTimer);}
+            if (enqueueTimer) clearTimeout(enqueueTimer);
             enqueueTimer = setTimeout(() => update(true), 200);
             
         });
         filterInput.addEventListener('change', () => {
-            if (enqueueTimer) {clearTimeout(enqueueTimer);}
+            if (enqueueTimer) clearTimeout(enqueueTimer);
             update(true);
         });
 
@@ -14516,7 +14536,7 @@ function renderVisitHistoryPage(myUserId, userConfig, threadHistoryAccess) {
         const title = record.title.toLowerCase();
         const initialTitle = (record.initialTitle||'').toLowerCase();
         const tid = String(record.tid);
-        for (const searchTerm of searchTerms) {
+        for (let searchTerm of searchTerms) {
             if (tid !== searchTerm && title.indexOf(searchTerm) === -1 && initialTitle.indexOf(searchTerm) === -1) {
                 return false;
             }
@@ -14534,7 +14554,7 @@ function annotateUsers(posts, myUserId, userConfig, userMap, services) {
             return;
         }
         post.rootElem.classList.add('rinsp-post-annotated');
-        const customNameEntry = userConfig.customUserHashIdMappings['#' + post.postUid];
+        let customNameEntry = userConfig.customUserHashIdMappings['#' + post.postUid];
         if (!post.defaultUserPic) {
             post.rootElem.classList.add('rinsp-post-custom-userpic');
             const img = post.userPicElem.querySelector('img');
@@ -14544,26 +14564,30 @@ function annotateUsers(posts, myUserId, userConfig, userMap, services) {
         }
         if (userConfig.selfBypassHideUserpic && post.postUid === myUserId) {
             // skip
-        } else if (!userConfig.customUserBypassHideUserpic || customNameEntry === null) {
+        } else {
+            if (!userConfig.customUserBypassHideUserpic || customNameEntry == null) {
                 if (post.defaultUserPic) {
                     if (userConfig.hideDefaultUserpic) {
                         post.rootElem.classList.add('rinsp-userpic-replace');
                         post.rootElem.classList.add('rinsp-userpic-replace-default');
                     }
-                } else if (userConfig.hideOtherUserpic) {
+                } else {
+                    if (userConfig.hideOtherUserpic) {
                         post.rootElem.classList.add('rinsp-userpic-replace');
                         post.rootElem.classList.add('rinsp-userpic-replace-custom');
                     }
+                }
             }
+        }
         const data = userMap.get(post.postUid); // basically impossible
-        if (data === null) {
+        if (data == null) {
             return;
         }
         const userLink = post.userNameElem.closest('a');
         const bookmarkElem = newElem('span', 'rinsp-userbookmark');
         userLink.parentNode.insertBefore(bookmarkElem, userLink);
         const bookmarkActionElem = addElem(bookmarkElem, 'span', 'rinsp-userbookmark-action');
-        if (customNameEntry !== null) {
+        if (customNameEntry != null) {
             post.rootElem.classList.add('rinsp-userframe-userknown');
             const renamed = customNameEntry[2] !== post.postUname;
             if (data.unnamed || renamed) {
@@ -14579,42 +14603,42 @@ function annotateUsers(posts, myUserId, userConfig, userMap, services) {
         }
         
         bookmarkActionElem.addEventListener('click', async () => {
-            if (customNameEntry === null) {
+            if (customNameEntry == null) {
                 const userHashId = await fetchUserHashId(post.postUid);
                 services.changeCustomUserMapping(post.postUid, userHashId, post.postUname)
                     .then(value => {
-                        if (value !== null) {
+                        if (value != null) {
                             location.reload();
                         }
                     });
             } else {
                 services.changeCustomUserMapping(customNameEntry[0], customNameEntry[1], customNameEntry[2])
                     .then(value => {
-                        if (value !== null) {
+                        if (value != null) {
                             location.reload();
                         }
                     });
             }
         });
-        const cell = post.userPicElem.closest('.r_two');
+        let cell = post.userPicElem.closest('.r_two');
         if (data.unnamed) {
             cell.classList.add('rinsp-userframe-unnamed');
         }
 
-        if (userConfig.showExtendedUserInfo && data !== null) {
+        if (userConfig.showExtendedUserInfo && data != null) {
             if (userConfig.showExtendedUserInfo$HP && data.hp < 0) {
-                const hpTag = newElem('div', 'rinsp-userframe-udata-hp');
+                let hpTag = newElem('div', 'rinsp-userframe-udata-hp');
                 hpTag.textContent = data.hp + 'HP';
                 cell.querySelector('.user-pic + div > a').appendChild(hpTag);
             }
             addElem(post.userPicElem, 'div', 'rinsp-userframe-pulldown');
-            const infoBlock = addElem(post.userPicElem, 'div', 'rinsp-userframe-userinfo');
+            let infoBlock = addElem(post.userPicElem, 'div', 'rinsp-userframe-userinfo');
 
             const addItem = (key, value, cls) => {
-                const item = addElem(infoBlock, 'dl', cls);
-                const dt = addElem(item, 'dt');
+                let item = addElem(infoBlock, 'dl', cls);
+                let dt = addElem(item, 'dt');
                 dt.textContent = key;
-                const dd = addElem(item, 'dd');
+                let dd = addElem(item, 'dd');
                 dd.textContent = value;
             };
             addItem('SP', data.sp.toLocaleString(), 'rinsp-userframe-udata-sp');
@@ -14622,13 +14646,13 @@ function annotateUsers(posts, myUserId, userConfig, userMap, services) {
 
             addElem(infoBlock, 'div', 'rinsp-userframe-udata-spacer');
 
-            const actionItem = addElem(infoBlock, 'div', 'rinsp-userframe-udata-punish-tags');
+            let actionItem = addElem(infoBlock, 'div', 'rinsp-userframe-udata-punish-tags');
             if (services.punishRecordAccess) {
                 services.punishRecordAccess
                     .getPunishRecord(post.postUid)
                     .then(record => {
                         actionItem.innerHTML = '';
-                        if (record === null || record.logs.length === 0) {
+                        if (record == null || record.logs.length === 0) {
                             return;
                         }
                         actionItem.appendChild(renderPunishTags(post.postUid, record));
@@ -14636,10 +14660,10 @@ function annotateUsers(posts, myUserId, userConfig, userMap, services) {
             }
 
 
-            const loginItem = addElem(infoBlock, 'div', 'rinsp-userframe-udata-login');
+            let loginItem = addElem(infoBlock, 'div', 'rinsp-userframe-udata-login');
             loginItem.textContent = '最后登录 ';
-            const loginItemValue = addElem(loginItem, 'span');
-            const awayDays = (todayMs - new Date(data.login)) / 86400000;
+            let loginItemValue = addElem(loginItem, 'span');
+            let awayDays = (todayMs - new Date(data.login)) / 86400000;
             if (awayDays < 1) {
                 loginItemValue.classList.add('rinsp-userframe-udata-login-today');
                 loginItemValue.textContent = '今天';
@@ -14704,7 +14728,7 @@ async function fetchUserHashId(userId) {
 
 async function showUserNames(userConfig, userHashLookupStore, myUserId) {
     let mappings = userConfig.customUserHashIdMappings;
-    if (mappings === null) {
+    if (mappings == null) {
         mappings = {};
     }
 
@@ -14722,7 +14746,7 @@ async function showUserNames(userConfig, userHashLookupStore, myUserId) {
                 }
             } else {
                 const fullName = mappings['#' + uid];
-                if (fullName !== null) {
+                if (fullName != null) {
                     el.classList.add('rinsp-owner-isknown');
                     if (alsoChangeName) {
                         el.textContent = fullName[2];
@@ -14740,17 +14764,17 @@ async function showUserNames(userConfig, userHashLookupStore, myUserId) {
 
     async function transformReplyCells(itemList) {
         const unresolved = [];
-        for (const item of itemList) {
+        for (let item of itemList) {
             if (item.byElem.classList.contains('rinsp-hashid-inspected')) {
                 continue;
             }
 
             item.byElem.classList.add('rinsp-hashid-inspected');
-            const match = item.byElem.textContent.match(/^by: ([0-9a-f]{8})$/);
+            let match = item.byElem.textContent.match(/^by: ([0-9a-f]{8})$/);
             if (match) {
                 const uhash = match[1];
-                const myself = userConfig.highlightMyself && userConfig.myUserHashId === uhash;
-                const fullName = mappings['@' + uhash];
+                let myself = userConfig.highlightMyself && userConfig.myUserHashId === uhash;
+                let fullName = mappings['@' + uhash];
                 if (fullName || myself) {
                     if (myself) {
                         item.byElem.textContent = 'by ' + MY_NAME_DISPLAY;
@@ -14777,7 +14801,7 @@ async function showUserNames(userConfig, userHashLookupStore, myUserId) {
         if (unresolved.length > 0) {
             const uids = await userHashLookupStore.getBatch(unresolved.map(entry => entry.uhashNum));
             unresolved.forEach((entry, i) => {
-                if (uids[i] !== null && entry.item.opUid === uids[i]) {
+                if (uids[i] != null && entry.item.opUid === uids[i]) {
                     entry.item.byElem.textContent = 'by 楼主';
                     entry.item.byElem.classList.add('rinsp-nickname-byop');
                 }
@@ -14790,7 +14814,7 @@ async function showUserNames(userConfig, userHashLookupStore, myUserId) {
         itemList = Array.from(document.querySelectorAll('tr.tr3.tac > td.smalltxt.y-style ~ td > a[href^="read.php?tid-"] + br'))
             .map(br => {
                 let byElem;
-                const next = br.nextSibling;
+                let next = br.nextSibling;
                 if (next.nodeType === 3) {
                     byElem = document.createElement('span');
                     byElem.textContent = next.textContent;
@@ -14832,7 +14856,7 @@ async function showUserNames(userConfig, userHashLookupStore, myUserId) {
 function getScaledValue(watchItem, min, max, myUserId) {
     const scaled = min + (max - min) * Math.pow(Math.min(OLD_ITEM_THRESHOLD_DAYS, Math.floor(getPostAge(watchItem, myUserId))), OLD_ITEM_SCALING) / Math.pow(OLD_ITEM_THRESHOLD_DAYS, OLD_ITEM_SCALING);
     const sinceMyReply = getMinutesSinceMyReply(watchItem, myUserId);
-    if (sinceMyReply !== null && sinceMyReply < num(REPLY_BOOST_FAST_MINS)) {
+    if (sinceMyReply != null && sinceMyReply < num(REPLY_BOOST_FAST_MINS)) {
         return Math.min(scaled, num(REPLY_BOOST_FAST_INTERVAL)); // fast phase: a reply is expected any minute
     }
     return scaled;
@@ -14840,7 +14864,7 @@ function getScaledValue(watchItem, min, max, myUserId) {
 
 // minutes since my own reply, while it is still the last post of the thread; null otherwise
 function getMinutesSinceMyReply(watchItem, myUserId) {
-    if (myUserId === null || watchItem.lastPostUid !== myUserId || !(watchItem.lastPostTime > 0)) {
+    if (myUserId == null || watchItem.lastPostUid !== myUserId || !(watchItem.lastPostTime > 0)) {
         return null;
     }
     return Math.max(0, (Date.now() - watchItem.lastPostTime) / 60000);
@@ -14851,7 +14875,7 @@ function getMinutesSinceMyReply(watchItem, myUserId) {
 function getPostAge(watchItem, myUserId) {
     const realAge = (Date.now() - watchItem.timeOpened) / 86400000;
     const sinceMyReply = getMinutesSinceMyReply(watchItem, myUserId);
-    if (sinceMyReply === null) {
+    if (sinceMyReply == null) {
         return realAge;
     }
     const decayMins = Math.max(0, sinceMyReply - num(REPLY_BOOST_FAST_MINS));
@@ -14873,16 +14897,16 @@ function getWatchExpiryDays(watchItem) {
 }
 
 function isWatchExpired(watchItem) {
-    if (watchItem.timeOpened === null) { // impossible actually
+    if (watchItem.timeOpened == null) { // impossible actually
         return false;
-    } 
+    } else {
         const expiryDays = getWatchExpiryDays(watchItem);
         if (expiryDays < 0) {
             return false;
-        } 
+        } else {
             return Date.now() - watchItem.timeOpened > expiryDays * 86400000;
-        
-    
+        }
+    }
 }
 
 // quota counting: expired items never count; auto-watch items have their own separate quota
@@ -14913,7 +14937,7 @@ function evictAutoWatchItem(watchList) {
             victimKey = key;
         }
     }
-    if (victimKey === null) {
+    if (victimKey == null) {
         return null;
     }
     const victim = watchList[victimKey];
@@ -14924,7 +14948,7 @@ function evictAutoWatchItem(watchList) {
 function setAutoWatchPendingMarker(myUserId, tid) {
     try {
         localStorage.setItem(AUTO_WATCH_PENDING_KEY_PREFIX + myUserId, tid + ':' + Date.now());
-    } catch  {}
+    } catch (ignore) {}
 }
 
 // returns true (and clears the marker) when a fresh marker for this thread exists; stale markers are discarded
@@ -14933,7 +14957,7 @@ function takeAutoWatchPendingMarker(myUserId, tid) {
     let raw = null;
     try {
         raw = localStorage.getItem(key);
-    } catch  {}
+    } catch (ignore) {}
     if (!raw) {
         return false;
     }
@@ -14942,7 +14966,7 @@ function takeAutoWatchPendingMarker(myUserId, tid) {
     if (!fresh || markerTid === tid) {
         try {
             localStorage.removeItem(key);
-        } catch  {}
+        } catch (ignore) {}
     }
     return fresh && markerTid === tid;
 }
@@ -14962,7 +14986,8 @@ function createInfiniteScrollHandler(typeId, infConfig, userConfig, mainConfigAc
             }
         }
     };
-    const cfg = {initPaginator(doc) {
+    const cfg = Object.assign({
+        initPaginator(doc) {
             const pagesones = Array.from(doc.querySelectorAll('.pages > ul > li.pagesone'));
             if (pagesones.length === 0) {
                 return null;
@@ -14974,7 +14999,7 @@ function createInfiniteScrollHandler(typeId, infConfig, userConfig, mainConfigAc
             const pagesone = pagesones.pop();
             const otherPageBars = pagesones.map(el => el.closest('.pages'));
             const match = pagesone.textContent.match(/Pages:\s*(\d+)(?: *\u2013 *(\d+))?\/(\d+)/);
-            const curPageStart = match[1] * 1;
+            let curPageStart = match[1] * 1;
             let curPageEnd = (match[2]||match[1]) * 1;
             const maxPage = match[3] * 1;
             const curPageLabel = pagesone.closest('ul').querySelector('li > b');
@@ -15066,9 +15091,10 @@ function createInfiniteScrollHandler(typeId, infConfig, userConfig, mainConfigAc
         },
         canScrollToNewPage() {
             return true;
-        }, ...infConfig};
+        }
+    }, infConfig);
     const paginator = cfg.initPaginator(document);
-    if (paginator === null) {
+    if (paginator == null) {
         return;
     }
     let prepareFlipTimer = null;
@@ -15117,16 +15143,16 @@ function createInfiniteScrollHandler(typeId, infConfig, userConfig, mainConfigAc
         if (bottomGap <= triggerMargin) {
             if (currentState === 1) {
                 setInfScrollState(2);
-                if (triggerFlipTimer === null) {
+                if (triggerFlipTimer == null) {
                     triggerFlipTimer = setTimeout(async () => {
                         setInfScrollState(0);
                         await insertNextPageSync();
                     }, delayBeforeFlipPage);
                 }
             } else if (currentState === 0) {
-                if (prepareFlipTimer === null) {
+                if (prepareFlipTimer == null) {
                     const nextPageURL = paginator.getNextPageURL();
-                    if (nextPageURL !== null) {
+                    if (nextPageURL != null) {
                         fetchNextPage(nextPageURL); // prefetch
                     }
                     prepareFlipTimer = setTimeout(() => {
@@ -15141,7 +15167,7 @@ function createInfiniteScrollHandler(typeId, infConfig, userConfig, mainConfigAc
 
     function install() {
         uninstall();
-        if (paginator.getNextPageURL() === null) {
+        if (paginator.getNextPageURL() == null) {
             return;
         }
         document.documentElement.classList.add('rinsp-infscroll-enabled');
@@ -15191,7 +15217,7 @@ function createInfiniteScrollHandler(typeId, infConfig, userConfig, mainConfigAc
     let failedDivider = null; // divider left behind by a failed load, reused on retry
     async function insertNextPage() {
         const nextPageURL = paginator.getNextPageURL();
-        if (nextPageURL === null) {
+        if (nextPageURL == null) {
             return;
         }
         const oldScrollTop = document.documentElement.scrollTop;
@@ -15212,7 +15238,7 @@ function createInfiniteScrollHandler(typeId, infConfig, userConfig, mainConfigAc
             nextDoc = await fetchNextPage(nextPageURL);
             // check the paginator before touching page content: a login / error page has neither, and getContentItems() may throw on it
             newPaginator = cfg.initPaginator(nextDoc);
-            if (newPaginator === null) {
+            if (newPaginator == null) {
                 divider.classList.remove('rinsp-infscroll-loading');
                 divider.textContent = '找不到更多记录';
                 uninstall();
@@ -15221,10 +15247,10 @@ function createInfiniteScrollHandler(typeId, infConfig, userConfig, mainConfigAc
             if (isFastLoadMode()) {
                 deferImageLoading(nextDoc);
             }
-            const currentIds = new Set(Array.from(cfg.getContentItems(document)).map(item => cfg.getItemId(item)).filter(item => item !== null));
+            const currentIds = new Set(Array.from(cfg.getContentItems(document)).map(item => cfg.getItemId(item)).filter(item => item != null));
             newItems = Array.from(cfg.getContentItems(nextDoc)).filter(item => {
                 const itemId = cfg.getItemId(item);
-                return itemId === null || !currentIds.has(itemId);
+                return itemId == null || !currentIds.has(itemId);
             });
         } catch (ex) {
             console.error('infinite scroll: failed to load next page', nextPageURL, ex);
@@ -15252,7 +15278,7 @@ function createInfiniteScrollHandler(typeId, infConfig, userConfig, mainConfigAc
         if (isFastLoadMode()) {
             resumeImageLoading(document);
         }
-        try { unsafeWindow.peacemaker.rescan(); } catch  {}
+        try { unsafeWindow.peacemaker.rescan(); } catch (ex) {}
         document.documentElement.scrollTop = oldScrollTop;
         return {
             scrollToNewPage() {
@@ -15311,7 +15337,7 @@ function setupInfiniteScroll_userReplies(userConfig, mainConfigAccess) {
         },
         canScrollToNewPage() {
             // folded mode merges new replies into existing thread groups; there is no new page to scroll to
-            return document.querySelector('.rinsp-reply-fold-table') === null;
+            return document.querySelector('.rinsp-reply-fold-table') == null;
         }
     }, userConfig, mainConfigAccess);
 
@@ -15420,7 +15446,7 @@ function setupInfiniteScroll_threadPicWall(userConfig, mainConfigAccess) {
             items.forEach(item => nextWall.appendChild(item));
             try {
                 unsafeWindow.jQuery('img.lazy', nextWall).lazyload({ skip_invisible : false });
-            } catch  {}
+            } catch (ignore) {}
         },
         getItemId(item) {
             const link = item.querySelector('.section-title > a[href]');
@@ -15584,7 +15610,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
 
     async function recordPunishment(uid, type, summary, reason, data) {
         let punishRecord = await userPunishRecordStore.get(uid);
-        if (punishRecord === null) {
+        if (punishRecord == null) {
             punishRecord = {
                 uid,
                 logs: []
@@ -15621,12 +15647,12 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
     }
     
     async function enableQuickPingFunction() {
-        const gfPost = getPosts(document, 1)[0];
-        if (gfPost === null || gfPost.floor !== 0) {
+        let gfPost = getPosts(document, 1)[0];
+        if (gfPost == null || gfPost.floor !== 0) {
             return;
         }
         const postTitleElem = document.querySelector('#subject_tpc');
-        if (postTitleElem === null) {
+        if (postTitleElem == null) {
             return;
         }
         const postTitle = postTitleElem.textContent.trim();
@@ -15647,8 +15673,8 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                 headtopicButton.parentNode.prepend(pingStatus);
             } else {
                 const currentPostLink = document.querySelector('#breadcrumbs > .crumbs-item.current > strong > a[href^="read.php?tid-"]');
-                if (currentPostLink === null)
-                    {return;}
+                if (currentPostLink == null)
+                    return;
                 const tid = Number.parseInt(currentPostLink.getAttribute('href').substring(13));
                 const fidLink = currentPostLink.closest('.crumbs-item').previousElementSibling.getAttribute('href');
                 const fid = Number.parseInt(fidLink.substring(15)); // e.g. "thread.php?fid-4.html"
@@ -15675,7 +15701,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                 quickPingButton.setAttribute('href', 'javascript:void(0)');
                 quickPingButton.textContent = '快捷评分';
                 quickPingButton.addEventListener('click', () => {
-                    const dayAge = (Date.now() - postTime) / 86400000;
+                    let dayAge = (Date.now() - postTime) / 86400000;
                     openScoringDialog(tid, fid, postTitle, dayAge, defaultRating);
                     return false;
                 });
@@ -15720,11 +15746,11 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
 
     async function enhanceReasonSelector() {
         const reasonField = document.querySelector('form[action] textarea[name="atc_content"]');
-        if (reasonField === null) {
+        if (reasonField == null) {
             return;
         }
         const reasonSelect = reasonField.nextElementSibling;
-        if (reasonSelect === null || reasonSelect.tagName !== 'SELECT' || !!reasonSelect.getAttribute('name')) {
+        if (reasonSelect == null || reasonSelect.tagName !== 'SELECT' || !!reasonSelect.getAttribute('name')) {
             return;
         }
         const replacement = addReasonSelector(reasonField);
@@ -15750,7 +15776,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
 
     async function updateReasonSelect(reasonSelect, reasonField) {
         function addOption(value, label) {
-            const option = addElem(reasonSelect, 'option');
+            let option = addElem(reasonSelect, 'option');
             option.setAttribute('value', value);
             option.textContent = label;
         }
@@ -15770,7 +15796,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
             }
         });
         reasonSelect.value = reasonField.value.trim();
-        reasonSelect.value ||= '';
+        reasonSelect.value = reasonSelect.value||'';
     }
 
     function addReasonSelector(reasonField) {
@@ -15790,7 +15816,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
         });
         reasonField.addEventListener('change', () => {
             reasonSelect.value = reasonField.value.trim();
-            reasonSelect.value ||= '';
+            reasonSelect.value = reasonSelect.value||'';
         });
         addElem(reasonTemplateElem, 'div');
         const editTemplateButton = addElem(reasonTemplateElem, 'a');
@@ -15984,9 +16010,11 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                             if (currentReason.length === 0) {
                                 reasonField.value = extra.reason;
                             }
-                        } else if (currentReason === extra.reason) {
+                        } else {
+                            if (currentReason === extra.reason) {
                                 reasonField.value = '';
                             }
+                        }
                     }
                     
                     updatePreview();
@@ -15999,21 +16027,23 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                 previewCell.setAttribute('class', '');
 
                 const defaultHeadtopDays = getDefaultHeadtopDays();
-                if (defaultHeadtopDays === null) {
+                if (defaultHeadtopDays == null) {
                     headtopInputField.setAttribute('placeholder', '自动 (无)');
-                } else if (defaultHeadtopDays[0] > 0) {
+                } else {
+                    if (defaultHeadtopDays[0] > 0) {
                         headtopInputField.setAttribute('placeholder', `自动 (${defaultHeadtopDays[0]}天)`);
                     } else if (defaultHeadtopDays[1] > 0) {
                         headtopInputField.setAttribute('placeholder', '自动 (旧帖省略)');
                     } else {
                         headtopInputField.setAttribute('placeholder', '自动 (无)');
                     }
+                }
 
                 multiScoreInputField.setAttribute('placeholder', '自动 (无)');
                 const finalScore = getFinalScore();
                 const headtopDays = getFinalHeadtopDays();
 
-                if (finalScore === null || headtopDays === null) {
+                if (finalScore == null || headtopDays == null) {
                     previewCell.classList.add('rinsp-quickping-status-error');
                     if (!baseScoreInputField.value.trim()) {
                         previewCell.textContent = '';
@@ -16022,11 +16052,11 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                     }
                 } else {
                     if (finalScore.total < 0) {
-                        const text = addElem(previewCell, 'span');
+                        let text = addElem(previewCell, 'span');
                         text.appendChild(document.createTextNode('扣分 '));
                         addElem(previewCell, 'b', null, { style: 'color: red' }).textContent = `${finalScore.total} SP`;
                     } else if (finalScore.multiplier > 1) {
-                        const text = addElem(previewCell, 'span');
+                        let text = addElem(previewCell, 'span');
                         text.appendChild(document.createTextNode('评分'));
                         if (finalScore.nonboostedScore > 0) {
                             text.appendChild(document.createTextNode(` +${finalScore.boostedScore} SP`));
@@ -16062,8 +16092,8 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
             updatePreview();
 
             function getHighlightParams() {
-                const color = compilationField.checked ? '#FF00FF' : ownBoughtField.checked ? '#0000FF' : ownTranslateField.checked ? '#FF0000' : null;
-                const bold = compilationField.checked || ownBoughtField.checked || ownTranslateField.checked;
+                let color = compilationField.checked ? '#FF00FF' : ownBoughtField.checked ? '#0000FF' : ownTranslateField.checked ? '#FF0000' : null;
+                let bold = compilationField.checked || ownBoughtField.checked || ownTranslateField.checked;
                 return { color, bold };
             }
 
@@ -16082,12 +16112,12 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
             function getFinalHeadtopDays() {
                 if (headtopInputField.value.trim().length === 0) {
                     return getDefaultHeadtopDays()[0];
-                } 
-                    const days = headtopInputField.value.trim() * 1;
+                } else {
+                    let days = headtopInputField.value.trim() * 1;
                     if (!Number.isInteger(days) || days < 0)
-                        {return null;} // invalid
+                        return null; // invalid
                     return days;
-                
+                }
             }
 
             function getFinalScore() {
@@ -16097,7 +16127,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                 } else {
                     scoreMultiplier = multiScoreInputField.value.trim() * 1;
                     if (!Number.isInteger(scoreMultiplier) || scoreMultiplier < 1)
-                        {return null;} // invalid
+                        return null; // invalid
                 }
                 let baseScore = baseScoreInputField.value * 1;
                 if (Number.isNaN(baseScore)) {
@@ -16109,11 +16139,11 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                     boostableBaseScore = getDefaultRating(multiBaseScoreInputField.value).baseTotalScore;
                 }
 
-                if (Number.isNaN(baseScore) || baseScore === 0 || boostableBaseScore === 0) {
+                if (Number.isNaN(baseScore) || baseScore == 0 || boostableBaseScore === 0) {
                     return null;
                 }
                 let scoreOffset = 0;
-                for (const extraScore of extraScores) {
+                for (let extraScore of extraScores) {
                     if (extraScore.checkbox.checked) {
                         scoreOffset += extraScore.amount;
                     }
@@ -16127,12 +16157,12 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                             boostedScore: 0,
                             nonboostedScore: rawScore
                         };
-                    } 
+                    } else {
                         return null;
-                    
+                    }
                 }
                 if (scoreMultiplier > 1) {
-                    const boostedScore = Math.floor(Math.min(baseScore, boostableBaseScore) * scoreMultiplier);
+                    let boostedScore = Math.floor(Math.min(baseScore, boostableBaseScore) * scoreMultiplier);
                     let nonboostedScore = Math.floor(Math.max(0, baseScore - boostableBaseScore)) + scoreOffset;
                     if (boostedScore + nonboostedScore === 0) {
                         nonboostedScore = 1;
@@ -16143,7 +16173,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                         boostedScore: boostedScore,
                         nonboostedScore: nonboostedScore
                     };
-                } 
+                } else {
                     const rawScore = Math.max(1, Math.floor(baseScore * scoreMultiplier)) + scoreOffset;
                     return {
                         total: rawScore,
@@ -16151,7 +16181,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                         boostedScore: 0,
                         nonboostedScore: rawScore
                     };
-                
+                }
             }
 
             const footer = addElem(borElem, 'ul', null, {
@@ -16161,7 +16191,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
             submitButton.addEventListener('click', async function() {
                 const finalHeadtopDays = getFinalHeadtopDays();
                 const finalScore = getFinalScore();
-                if (finalScore === null || finalHeadtopDays === null) {
+                if (finalScore == null || finalHeadtopDays == null) {
                     alert('输入错误 请更正');
                 } else {
                     modelMask.remove();
@@ -16191,18 +16221,18 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
             const respDoc = new DOMParser().parseFromString(respText, 'text/html');
             if (((respDoc.querySelector('#main .t table .h')||{}).textContent||'').trim().endsWith('提示信息')) {
                 return Promise.reject(((respDoc.querySelector('#main .t table .f_one center')||{}).textContent||'').trim());
-            } 
+            } else {
                 return Promise.reject('不明错误');
-            
-        } 
+            }
+        } else {
             return Promise.resolve(true);
-        
+        }
     }
 
     let lastRequestTime = 0;
 
     async function attemptRequest() {
-        const interval = Date.now() - lastRequestTime;
+        let interval = Date.now() - lastRequestTime;
         if (interval < MIN_REQUEST_INTERVAL) {
             await sleep(MIN_REQUEST_INTERVAL - interval);
         }
@@ -16308,7 +16338,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
 
         async function executeHighlight() {
             if (!highlightParams.color && !highlightParams.bold)
-                {return Promise.resolve(true);}
+                return Promise.resolve(true);
             const url = `${document.location.origin}/mawhole.php`;
             await attemptRequest();
             return await fetchWithRetry(url, {
@@ -16339,7 +16369,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
 
         async function executeHeadtopic() {
             if (headtopDays <= 0)
-                {return Promise.resolve(true);}
+                return Promise.resolve(true);
             const url = `${document.location.origin}/mawhole.php`;
             await attemptRequest();
             return await fetchWithRetry(url, {
@@ -16385,12 +16415,12 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
     }
 
     function enhanceShieldActionPage() {
-        const uid = Number.parseInt(extraPageParams.uid) || null;
-        if (uid === null) {
+        const uid = Number.parseInt(extraPageParams['uid']) || null;
+        if (uid == null) {
             return;
         }
         const form = document.querySelector('form[action="masingle.php?action=shield"]');
-        if (form === null) {
+        if (form == null) {
             return;
         }
 
@@ -16424,16 +16454,16 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
     // ban user is missing the reason preset selector
     function enhanceBanUserActionPage() {
         const form = document.querySelector('form[action="masingle.php?action=banuser"]');
-        if (form === null) {
+        if (form == null) {
             return;
         }
         const reasonField = form.querySelector('td > textarea[name="atc_content"]');
-        if (reasonField === null) {
+        if (reasonField == null) {
             return;
         }
         const userNameCell = form.querySelector('table > tbody > tr + tr.tr3 > td.tar + td');
         const userName = userNameCell.textContent.trim();
-        const uid = Number.parseInt(extraPageParams.uid) || null;
+        const uid = Number.parseInt(extraPageParams['uid']) || null;
         if (uid) {
             userNameCell.innerHTML = '';
             addElem(userNameCell, 'a', null, { href: `u.php?action-show-uid-${uid}.html`, target: '_blank' }).textContent = userName;
@@ -16499,12 +16529,12 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                 if (alsoDelete) {
                     if (pid === 'tpc') {
                         return await executeDeletePost(fid, tid, reason);
-                    } 
+                    } else {
                         return await executeDeleteReply(fid, tid, pid, reason);
-                    
-                } 
+                    }
+                } else {
                     return true;
-                
+                }
             }
             function finish() {
                 if (!alsoDelete) {
@@ -16570,11 +16600,11 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
 
     function enhanceMawholeActionPage() {
         const form = document.querySelector('form[action="mawhole.php?"]');
-        if (form === null) {
+        if (form == null) {
             return;
         }
         const actionField = form.querySelector('input[type="hidden"][name="action"]');
-        if (actionField === null) {
+        if (actionField == null) {
             return;
         }
         if (actionField.value === 'del') {
@@ -16603,7 +16633,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                 const fid = formData.get('fid') * 1;
                 const tids = formData.getAll('tidarray[]').map(x=>x*1);
                 const reason = formData.get('atc_content');
-                for (const tid of tids) {
+                for (let tid of tids) {
                     const uid = mappings.get(tid);
                     if (uid && uid !== myUserId) {
                         const threadTitle = (form.querySelector(`th > a[href="read.php?tid-${tid}.html"]`)||{}).textContent||'';
@@ -16622,7 +16652,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
 
     function enhanceDeleteReplyActionPage() {
         const form = document.querySelector('form[action="masingle.php?action=delatc"]');
-        if (form === null) {
+        if (form == null) {
             return;
         }
         const countDisplayCell = form.querySelector('table > tbody > tr + tr.tr3 > td.tar + td');
@@ -16641,7 +16671,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                 const tid = formData.get('tid') * 1;
                 const fid = formData.get('fid') * 1;
                 const reason = formData.get('atc_content');
-                for (const uid of uids) {
+                for (let uid of uids) {
                     if (uid !== myUserId) {
                         await recordPunishment(uid, PUNISH_TYPE_DELETE_REPLY, '', reason, {
                             tid,
@@ -16657,7 +16687,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
 
     function enhanceEndRewardActionPage() {
         const form = document.querySelector('form[action="job.php?action=endreward"]');
-        if (form === null) {
+        if (form == null) {
             return;
         }
         const bounty = extraPageParams.bounty * 1;
@@ -16687,7 +16717,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
             const presetButton = addElem(headerCell, 'a', 'rinsp-ping-preset-switch', { href: 'javascript:' });
             presetButton.addEventListener('click', () => {
                 form.querySelector(`input[name="type"][value="${type}"]`).checked = true;
-                spInput.value = sp === null ? '' : '' + sp;
+                spInput.value = sp == null ? '' : '' + sp;
                 if (ifmsg) {
                     form.querySelector('input[name="ifmsg"][value="1"]').checked = true;
                 } else {
@@ -16757,7 +16787,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
 
     function enhancePingActionPage() {
         const form = document.querySelector('form[action="operate.php?action=showping"]');
-        if (form === null) {
+        if (form == null) {
             return;
         }
         const countDisplayCell = form.querySelector('table > tbody > tr + tr.tr3 + tr.tr3 > td.tar + th');
@@ -16844,7 +16874,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                 if (punishType) {
                     const tid = formData.get('tid') * 1;
                     const reason = formData.get('atc_content');
-                    for (const uid of uids) {
+                    for (let uid of uids) {
                         if (uid !== myUserId) { // actually impossible at this point
                             await recordPunishment(uid, punishType, actionSummary, reason, {
                                 tid,
@@ -16916,7 +16946,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                 const checkCell = addElem(itemTr, 'td');
                 const selectCheckbox = addElem(checkCell, 'input', null, { type: 'checkbox' });
                 const titleCell = addElem(itemTr, 'td', 'tal');
-                const postUrl = `read.php?tid-${item.tid}.html`;
+                let postUrl = `read.php?tid-${item.tid}.html`;
                 addElem(titleCell, 'a', null, {
                     href: postUrl,
                     target: '_blank'
@@ -17009,7 +17039,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                 pingableItems.forEach(pItem => {
                     if (pItem.selected()) {
                         const score = pItem.score();
-                        if (score !== null) {
+                        if (score != null) {
                             pingItems.push({
                                 item: pItem.item,
                                 score
@@ -17044,13 +17074,13 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                 async function action(progressDisplay) {
                     const itemList = addElem(progressDisplay, 'ul', 'rinsp-batchping-progress-list');
                     const displayItems = [];
-                    for (const pingItem of pingItems) {
+                    for (let pingItem of pingItems) {
                         const li = addElem(itemList, 'li');
                         li.textContent = pingItem.item.title;
                         displayItems.push(li);
                     }
                     await sleep(1000);
-                    for (const pingItem of pingItems) {
+                    for (let pingItem of pingItems) {
                         if (pingItem.score > 0) {
                             await executeScoreFunction(pingItem.item.fid, pingItem.item.tid, pingItem.score, 0, {}, true, '');
                         } else {
@@ -17068,11 +17098,11 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
 
     function addDeleteFormMetadata() {
         const delButton = document.querySelector('a#del[href^="mawhole.php?action-del-"]');
-        if (delButton === null) {
+        if (delButton == null) {
             return null;
         }
-        const gfPost = getPosts(document, 1)[0];
-        if (gfPost === null || gfPost.floor !== 0) {
+        let gfPost = getPosts(document, 1)[0];
+        if (gfPost == null || gfPost.floor !== 0) {
             return;
         }
         const actionHref = delButton.getAttribute('href');
@@ -17081,11 +17111,11 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
 
     function addBulkDeleteFormMetadata() {
         const form = document.querySelector('form[name="mawhole"][action="mawhole.php"]');
-        if (form === null) {
+        if (form == null) {
             return;
         }
         const submitButton = form.querySelector('input[type="button"][name="hello"][onclick]');
-        if (submitButton === null) {
+        if (submitButton == null) {
             return;
         }
         submitButton.removeAttribute('onclick');
@@ -17109,7 +17139,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
 
     function addBatchPingFunction(fid) {
         const adminAreaAnchor = document.querySelector('form[name="mawhole"] > .t + .t5.tac > div > .btn[name="chkall"]');
-        if (adminAreaAnchor === null) {
+        if (adminAreaAnchor == null) {
             return;
         }
         const pingAllButton = newElem('input', 'btn', { type: 'button', name: 'chkall', value: '批量评分', style: 'float: left; margin-left: 1em; margin-right: -100%' });
@@ -17298,7 +17328,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
         Array.from(document.querySelectorAll('input[type="checkbox"][name="selid[]"]'))
             .forEach(el => {
                 const value = decideChecked(el);
-                if (first === null && value) {
+                if (first == null && value) {
                     first = el;
                 }
                 el.checked = value;
@@ -17310,12 +17340,12 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
 
     function addBatchPostSelectionControl() {
         const targetControlBar = document.querySelector('#main > .h2 > .fr.w');
-        if (targetControlBar === null || targetControlBar.querySelector('.rinsp-reply-batch-sel')) {
+        if (targetControlBar == null || targetControlBar.querySelector('.rinsp-reply-batch-sel')) {
             return;
         }
 
         function isUnscored(el) {
-            return el.closest('table').querySelector('div[id^="mark_"]') === null;
+            return el.closest('table').querySelector('div[id^="mark_"]') == null;
         }
           
         function isBanned(el) {
@@ -17337,7 +17367,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                 const uid = Number.parseInt(a.getAttribute('href').substring(22));
                 if (seen.has(uid)) {
                     el.checked = checkValue;
-                    if (first === null) {first = el;}
+                    if (first == null) first = el;
                 } else {
                     el.checked = !checkValue;
                     seen.add(uid);
@@ -17392,7 +17422,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
 
     function addBatchManageThreadFunction() {
         const adminAreaAnchor = document.querySelector('#main > .fr');
-        if (adminAreaAnchor === null) {
+        if (adminAreaAnchor == null) {
             return;
         }
         const openBulkActionSelector = (actionId) => {
@@ -17412,14 +17442,14 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                 const fidGroups = new Map();
                 selection.forEach(item => {
                     let group = fidGroups.get(item.fid);
-                    if (group === null) {
+                    if (group == null) {
                         group = [];
                         fidGroups.set(item.fid, group);
                     }
                     group.push(item);
                 });
 
-                for (const [fid, group] of fidGroups) {
+                for (let [fid, group] of fidGroups) {
                     openBulkActionPage(fid, group);
                     await sleep(1000);
                 }
@@ -17525,7 +17555,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
 
     async function handleAwardBestAnswer(post, sp, multiplier) {
         const totalAmount = sp * multiplier;
-        const suffix = multiplier > 1 ? ` (${multiplier}倍)` : '';
+        let suffix = multiplier > 1 ? ` (${multiplier}倍)` : '';
         if (!confirm(`选为最佳答案 ${totalAmount} SP${suffix}？`)) {
             return;
         }
@@ -17582,14 +17612,14 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                     };
                     userGrouped.set(ip, group);
                 }
-                for (const uid of uids) {
+                for (let uid of uids) {
                     group.uids.add(uid);
                     const ips = userToIps.get(uid);
-                    for (const ip2 of ips) {
+                    for (let ip2 of ips) {
                         if (ip2 !== ip) {
-                            const group2 = userGrouped.get(ip2);
+                            let group2 = userGrouped.get(ip2);
                             if (group2 && group2.gid !== group.gid) {
-                                for (const uid2 of group2.uids) {
+                                for (let uid2 of group2.uids) {
                                     group.uids.add(uid2); 
                                 }
                                 userGrouped.set(ip2, group);
@@ -17606,7 +17636,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                     if (!group.color) {
                         group.color = nextColor();
                     }
-                    for (const uid of group.uids) {
+                    for (let uid of group.uids) {
                         multiAccountMap.set(uid, group);
                     }
                 });
@@ -17636,7 +17666,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                 if (showping) {
                     const tpcPing = document.querySelector('#mark_tpc');
                     if (!punishrequest) {
-                        if (tpcPing && tpcPing.textContent.match(/.*评分记录.*/) !== null) {
+                        if (tpcPing && tpcPing.textContent.match(/.*评分记录.*/) != null) {
                             // skip: already received penalty
                         } else {
                             const li = newElem('li', 'rinsp-punishrequest-switch');
@@ -17663,7 +17693,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                 if (showping) {
                     const tpcPing = document.querySelector('#mark_tpc');
                     if (!punishclassify) {
-                        if (tpcPing && tpcPing.textContent.match(/.*评分记录.*SP币:-50 .*分类.*/) !== null) {
+                        if (tpcPing && tpcPing.textContent.match(/.*评分记录.*SP币:-50 .*分类.*/) != null) {
                             // skip: already received penalty
                         } else {
                             const li = newElem('li', 'rinsp-punishclassify-switch');
@@ -17673,7 +17703,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                             punishclassify.addEventListener('click', () => handleMisclassificationPunish(posts[0]));
                         }
                     }
-                    if (bountyStatus && bountyStatus.ended === 2 && bountyStatus.winner === null) {
+                    if (bountyStatus && bountyStatus.ended === 2 && bountyStatus.winner == null) {
                         const pingSp = tpcPing ? (tpcPing.textContent.match(/.*评分记录.*SP币:\+?(-?\d+)/)||[null,0])[1] * 1 : 0;
                         if (pingSp === 0) {
                             bestAnswerMultiplier = 2;
@@ -17686,7 +17716,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                     if (bestAnswerMultiplier > 0) {
                         posts.forEach(post => {
                             if (bestAnswerMultiplier === 0)
-                                {return;}
+                                return;
                             const mark = post.rootElem.querySelector('div[id^="mark_"] li');
                             if (mark && mark.textContent.indexOf('最佳答案') !== -1) {
                                 bestAnswerMultiplier = 0;
@@ -17724,7 +17754,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                             openActionPage(form, `operate.php?action=showping&page=${page}`);
                         });
                     }
-                    if (selCheckbox.parentElement.querySelector('.rinsp-selallid-button') === null) {
+                    if (selCheckbox.parentElement.querySelector('.rinsp-selallid-button') == null) {
                         selCheckbox.parentElement.appendChild(document.createTextNode(' '));
                         const selAllButton = addElem(selCheckbox.parentElement, 'input', 'btn2 rinsp-selallid-button', { type: 'button', value: '全选' });
                         
@@ -17740,7 +17770,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
             if (showpingButton) {
                 const showpingActionHref = showpingButton.getAttribute('href');
                 if (showpingActionHref.indexOf('#') === -1) {
-                    const extraParams = [];
+                    let extraParams = [];
                     post.rootElem.querySelectorAll('.r_one .tpc_content .tips').forEach(tips => {
                         const match = tips.textContent.match(/最佳答案奖励:\s\(\+(\d+)\)\sSP币/);
                         if (match) {
@@ -17756,12 +17786,12 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                             boughtCount = match[2]*1;
                         }
                     });
-                    if (boughtCount > 0 && bountyStatus !== null) {
+                    if (boughtCount > 0 && bountyStatus != null) {
                         boughtCount--;
                     }
                     const total = sellPrice * boughtCount;
                     if (sellPrice > 0) {
-                        if (bountyStatus !== null && post.postUid === threadOwnerId) {
+                        if (bountyStatus != null && post.postUid === threadOwnerId) {
                             post.rootElem.classList.add('rinsp-post-illegal-sell');
                             extraParams.push('-badsell-opsell');
                         }
@@ -17770,7 +17800,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                         }
                     }
                     if (post.postUid !== threadOwnerId) {
-                        if (bountyStatus && bountyStatus.winner === null) {
+                        if (bountyStatus && bountyStatus.winner == null) {
                             extraParams.push('-bounty-' + bountyStatus.sp);
                         }
                         if (bestAnswerMultiplier > 0) {
@@ -17809,7 +17839,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                 const button = newElem('a', 'rinsp-user-admin-button', { href: 'javascript:'});
                 button.textContent = '🔘';
                 let addExtraMenuItems = () => {};
-                if (group !== null) {
+                if (group != null) {
                     adminBar.prepend(button);
                     adminBar.setAttribute('style', `outline: 2px solid ${group.color}; outline-offset: 2px`);
                     post.rootElem.classList.add('rinsp-post-multi-uid');
@@ -17865,7 +17895,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                 const entries = [];
                 punishRecords.forEach(record => {
                     record.logs.forEach(entry => {
-                        entries.push({uid: record.uid, ...entry});
+                        entries.push(Object.assign({ uid: record.uid }, entry));
                     });
                 });
                 return entries;
@@ -17878,14 +17908,16 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
         const services = {
             async getLogEntries() {
                 let punishRecord = await userPunishRecordStore.get(userId);
-                if (punishRecord === null) {
+                if (punishRecord == null) {
                     punishRecord = {
                         uid: userId,
                         logs: []
                     };
                 }
                 return punishRecord.logs.map(entry => {
-                    return {uid: userId, ...entry};
+                    return Object.assign({
+                        uid: userId
+                    }, entry);
                 });
             }
         };
@@ -17914,12 +17946,14 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
             const typeMap = new Map();
             entries = entries.map(entry => {
                 let punishTypeId = punishTypeToId.get(entry.type);
-                if (punishTypeId === null) {
+                if (punishTypeId == null) {
                     punishTypeId = punishTypeToId.size + 1;
                     punishTypeToId.set(entry.type, punishTypeId);
                 }
                 typeMap.set(punishTypeId, entry.type);
-                return {typeId: punishTypeId, ...entry};
+                return Object.assign({
+                    typeId: punishTypeId
+                }, entry);
             });
             const sectionFilter = addSectionFilter(typeMap, pageScopeUid, () => update(), {});
     
@@ -17936,7 +17970,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                 const addRecordButton = addElem(filterBox1, 'a', null, { href: 'javascript:'});
                 addRecordButton.textContent = '➕添加记录';
                 addRecordButton.addEventListener('click', async () => {
-                    const comment = prompt('请添加备注');
+                    let comment = prompt('请添加备注');
                     if (comment) {
                         const newLogEntry = {
                             time: Date.now(),
@@ -17946,7 +17980,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                             data: {}
                         };
                         let updateRecord = await userPunishRecordStore.get(subjectUid);
-                        if (updateRecord === null) {
+                        if (updateRecord == null) {
                             updateRecord = {
                                 uid: subjectUid,
                                 logs: []
@@ -17954,8 +17988,10 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                         }
                         updateRecord.logs.push(newLogEntry);
                         await userPunishRecordStore.put(subjectUid, updateRecord);
-                        entries.unshift({uid: subjectUid,
-                            typeId: punishTypeToId.get(PUNISH_TYPE_CUSTOM), ...newLogEntry});
+                        entries.unshift(Object.assign({
+                            uid: subjectUid,
+                            typeId: punishTypeToId.get(PUNISH_TYPE_CUSTOM)
+                        }, newLogEntry));
                         update();
                     }
                 });
@@ -17982,7 +18018,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                 const terms = filterInput.value.toLowerCase().trim().split(/\s+/g);
                 const thisFilterString = terms.join(' ');
                 if (filterChangeOnly && lastFilterString === thisFilterString)
-                    {return;}
+                    return;
                 lastFilterString = thisFilterString;
                 statusCell.textContent = '';
                 tbody.innerHTML = '';
@@ -18074,7 +18110,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                     } else {
                         dataKeys.forEach(key => {
                             const value = entry.data[key];
-                            if (value !== null) {
+                            if (value != null) {
                                 const pair = addElem(fullContent, 'div');
                                 addElem(pair, 'label').textContent = key;
                                 pair.appendChild(document.createTextNode(' '));
@@ -18088,9 +18124,9 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
                     delButton.textContent = '🗑️';
                     delButton.addEventListener('click', async () => {
                         if (confirm('删除这条记录？')) {
-                            const updateRecord = await userPunishRecordStore.get(entry.uid);
-                            if (updateRecord !== null) {
-                                updateRecord.logs = updateRecord.logs.filter(log => log.time !== entry.time);
+                            let updateRecord = await userPunishRecordStore.get(entry.uid);
+                            if (updateRecord != null) {
+                                updateRecord.logs = updateRecord.logs.filter(log => log.time != entry.time);
                                 await userPunishRecordStore.put(entry.uid, updateRecord);
                             }
                             entries = entries.filter(r => r !== entry);
@@ -18111,12 +18147,12 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
 
             let enqueueTimer = null;
             filterInput.addEventListener('keyup', () => {
-                if (enqueueTimer) {clearTimeout(enqueueTimer);}
+                if (enqueueTimer) clearTimeout(enqueueTimer);
                 enqueueTimer = setTimeout(() => update(true), 200);
                 
             });
             filterInput.addEventListener('change', () => {
-                if (enqueueTimer) {clearTimeout(enqueueTimer);}
+                if (enqueueTimer) clearTimeout(enqueueTimer);
                 update(true);
             });
     
@@ -18126,16 +18162,16 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
         
         function match(entry, searchTerms) {
             foreach_term:
-            for (const searchTerm of searchTerms) {
+            for (let searchTerm of searchTerms) {
                 if ((entry.summary||'').toLowerCase().indexOf(searchTerm) !== -1)
-                    {continue;}
+                    continue;
                 if ((entry.reason||'').toLowerCase().indexOf(searchTerm) !== -1)
-                    {continue;}
+                    continue;
                 if (entry.data) {
-                    for (const value of Object.values(entry.data)) {
+                    for (let value of Object.values(entry.data)) {
                         if (typeof value === 'string') {
                             if (value.toLowerCase().indexOf(searchTerm) !== -1)
-                                {continue foreach_term;}
+                                continue foreach_term;
                         }
                     }
                 }
@@ -18152,7 +18188,7 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
         return {
             async getPunishRecord(uid) {
                 let record = punishRecordCache.get(uid);
-                if (record === null) {
+                if (record == null) {
                     record = userPunishRecordStore.get(uid);
                     punishRecordCache.set(uid, record);
                 }
@@ -18201,14 +18237,14 @@ function initAdminFunctions(myUserId, userConfig, userPunishRecordStore) {
 function createLocalStorageProperty(name, defaultValue) {
     return {
         get() {
-            const value = localStorage.getItem(name);
-            if (value !== null || defaultValue === null) {
+            let value = localStorage.getItem(name);
+            if (value != null || defaultValue == null) {
                 return value;
             }
             return defaultValue;
         },
         set(value) {
-            if (value === null) {
+            if (value == null) {
                 localStorage.removeItem(name);
             } else {
                 localStorage.setItem(name, value);
@@ -18230,19 +18266,19 @@ function applyDarkTheme() {
     if (isDarkMode()) {
         document.documentElement.classList.add('rinsp-dark-mode');
         return true;
-    } 
+    } else {
         document.documentElement.classList.remove('rinsp-dark-mode');
         return false;
-    
+    }
 }
 
 function isDarkMode() {
     if (darkModeEnabledProperty.get()) {
         if (darkModeFollowsSystemProperty.get()) {
             return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        } 
+        } else {
             return true;
-        
+        }
     }
     return false;
 }
@@ -18257,13 +18293,13 @@ async function setDomainRedirectEnabled(active) {
 }
 
 async function getDomainRedirectTarget() {
-    const value = await GM.getValue(DOMAIN_REDIRECT_ENABLED_KEY);
+    let value = await GM.getValue(DOMAIN_REDIRECT_ENABLED_KEY);
     if (value && value.match(/\*?https?:\/\/.*/)) {
         // fix corrupt "*undefined" value
         return value;
-    } 
+    } else {
         return null;
-    
+    }
 }
 
 function isAdminPage() {
@@ -18280,7 +18316,7 @@ function requiresDomainRedirect() {
         case '/register.php':
             return false;
     }
-    return document.querySelector('#user-login > a[href="register.php"]') !== null;
+    return document.querySelector('#user-login > a[href="register.php"]') != null;
 }
 
 async function attemptDomainRedirect() {
@@ -18376,7 +18412,7 @@ function verifyhash() {
         verifyhashCache = hiddenField.value;
         return hiddenField.value;
     }
-    for (const scriptElement of document.querySelectorAll('head > script')) {
+    for (let scriptElement of document.querySelectorAll('head > script')) {
         const match = scriptElement.textContent.match(/;var verifyhash = '([A-Za-z0-9]{8})';/);
         if (match) {
             verifyhashCache = match[1];
@@ -18392,7 +18428,7 @@ function getImgSrc(img) {
 }
 
 function getByteLength(text) {
-    if (textEncoder === null) {return 0;}
+    if (textEncoder == null) return 0;
     return textEncoder.encode(text).length;
 }
 
@@ -18421,9 +18457,9 @@ function truncateByByteLength(text, limit, ellipsis) {
             chars.push(ellipsis);
         }
         return chars.join('');
-    } 
+    } else {
         return text;
-    
+    }
 }
 
 function addGlobalStyle(parent, css) {
@@ -18439,9 +18475,9 @@ function parseSpAmount(text) {
     if (match) {
         const amt = parseNumeralText(match[1]);
         return amt === 99999 ? 0 : amt;
-    } 
+    } else {
         return 0;
-    
+    }
 }
 
 function parseNumeralText(text) {
@@ -18477,11 +18513,11 @@ function parseNumeralText(text) {
 
 function getBountyStatus(doc) {
     const tpc = doc.querySelector('#td_tpc');
-    if (tpc === null) {
+    if (tpc == null) {
         return null;
     }
     const bountyTimeElem = tpc.closest('table').querySelector('.tpc_content .tips .s3');
-    if (bountyTimeElem === null) {
+    if (bountyTimeElem == null) {
         return null;
     }
     let bountyAmount = 0;
@@ -18526,7 +18562,7 @@ function getBountyStatus(doc) {
 }
 
 function findErrorMessage(doc) {
-    const err = doc.querySelector('#main .t .f_one center');
+    let err = doc.querySelector('#main .t .f_one center');
     return err ? err.textContent.trim()||'不明错误' : null;
 }
 
@@ -18537,9 +18573,9 @@ function getAgeString(ageMins) {
         return Math.floor(ageMins / 60) + '小时前';
     } else if (ageMins > 1) {
         return Math.floor(ageMins) + '分钟前';
-    } 
+    } else {
         return '刚刚';
-    
+    }
 }
 
 function addElem(parent, tag, styleClass, attrs) {
@@ -18556,7 +18592,7 @@ function newElem(tag, styleClass, attrs) {
         });
     }
     if (attrs) {
-        for (const name of Object.keys(attrs)) {
+        for (let name of Object.keys(attrs)) {
             elem.setAttribute(name, attrs[name]);
         }
     }
@@ -18594,7 +18630,7 @@ async function runWithLock(key, duration, job) {
 
 // polyfill replacement
 function Object_hasOwn(obj, prop) {
-    return Object.hasOwn(obj, prop);
+    return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 
 function sleep(timeout) {
@@ -18628,23 +18664,23 @@ function checkDevMode() {
 }
 
 function setCookie(name, value, hours) {
-    let expires = '';
+    var expires = '';
     if (hours) {
-        const date = new Date();
+        var date = new Date();
         date.setTime(date.getTime() + (hours*60*60*1000));
         expires = '; expires=' + date.toUTCString();
     }
     document.cookie = name + '=' + (value || '')  + expires + '; path=/';
 }
 
-/* function console_info() {
+function console_info() {
     let out = document.querySelector('#rinsp-debug-console');
     if (out == null) {
         out = addElem(document.body, 'pre', null, { id: 'rinsp-debug-console', style: 'position:fixed;top:20px;left:20px;width:40em;max-height:30em;outline:5px solid #CCC;background:#FFF9;color:#000;overflow:auto;z-index:99999;' });
     }
     out.textContent += Array.from(arguments).join(', ') + '\n';
     out.scrollTop = 10000000;
-} */
+}
 
 /* ==== START: script initialisation ==== */
 
@@ -18681,12 +18717,12 @@ const IMAGE_LOADING_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhIAAgAKIDAO3t7fn
 const IMAGE_LOADING_PLACEHOLDER_DARK = 'data:image/gif;base64,R0lGODlhIAAgAKIGAEVNUjA2OSImKD1ESCAjJTxDRx8iJDIyMiH/C05FVFNDQVBFMi4wAwEAAAAh+QQFCgAGACwAAAAAIAAgAAADsWi63P4wyqnKuDjrPQocQiiOZCkMn0CsbOu6Z9qGb03ED7gKVqfaLJxDRwh0LAFgEJX7GTHJYOC3lK0ChUL0iqHemEMvzJhFVps23rE8iAobRNilTPe9GXEWmc73geFie3x9WFY3FoOJiFYna4qDMoKPiRAFApKTkA9ZjpmaFKChoqOkpaanEwEAAAEOIw+vDaqrrA2xtiIOtLS4IbC5DburvQK/vg0Fux6oyKvLzNCnCQAh+QQFCgAGACwCABgAHAAGAAADIGhGpP4wlvJCiDg7Ym3T0lNw3QeKqGGd2OW4gsC205UAACH5BAkKAAYALAIAGAAcAAYAAAMkaCai/hCKEJoJCsftRBlDwTwWFwUgWJHmhqaYprXSF5a0Oa0JACH5BAUKAAYALAAAAAAgACAAAANJaLrc/jDKSau9OOvNu/9gKI5kaZ5oqq5s65pCEAibQDdCMQzFzdi2h0zWCOx2AQfQt4gNmcZjEgdUDmc/HY+pWAqHVqwm+CIlAAAh+QQJCgAGACwCABgAHAAGAAADJmhRFfYwykjICyADNzsUD1hoQOF5FkSMmnlO6UNgGvdKoJEvze0nACH5BAUKAAYALAAAAAAgACAAAANAaLrc/jDKSau9OOvNu/9gKI5kaZ5oqq5s65oBAARjLM+OoAvPzjO3W27XIwKDgKGuuGQUggXlr+FzPAHRlzaSAAAh+QQFCgAGACwCABgAEQAGAAADHWhWpf6EvElDUM1lR6wl2zJ1XvdcFWoEjDoJgpIAACH5BAkKAAYALAIAGAARAAYAAAMfaBIh9vAJp8oYhcbweLgXF2nKB4oQOVkY2b1lE81QAgAh+QQFCgAGACwAAAAAIAAgAAADQmi63P4wykmrvTjrzbv/YCiOZGmeaKqubOueggAJQSBjde0IxTAUtwotF1QEfL7AZVgrGo5I5SUnZfB8wExs1ny9EgAh+QQJCgAGACwCABgAEQAGAAADImhGpO6hlKBEfSqADUJzn1NwQBEu2MgVhtVihsZRMBZNRgIAIfkEBQoABgAsAAAAACAAIAAAAzloutz+MMpJq7046827/2AojmRpnmiqrmzrvkoAAEEm3IIjzzSG5w0ez4dzCGfEm6MgLIyYACeslQAAIfkEBQoABgAsDQAYABEABgAAAx1oVqX+hLxJQ1DNZUesJdsydV73XBVqBIw6CYKSAAAh+QQJCgAGACwNABgAEQAGAAADH2gSIfbwCafKGIXG8Hi4FxdpygeKEDlZGNm9ZRPNUAIAIfkEBQoABgAsAAAAACAAIAAAA0Noutz+MMpJq7046827/2AojmRpnmiqrmzrvosgQEIQzJhtO0IxDAVcpaYTKgK/X+BCtBkNyOTyopsyer9gRkZzwkYJADs=';
 
 function deferImageLoading(doc) {
-    if (DEBUG_MODE) {console.info('[STAGE] deferImageLoading');}
+    if (DEBUG_MODE) console.info('[STAGE] deferImageLoading');
     const dark = isDarkMode();
     const defaultImagePath = `${document.location.origin}/images/face/`;
     doc.querySelectorAll('.user-pic img[src], #u-portrait img.pic[src]:not([data-org-img])').forEach(img => {
         if (img.src.startsWith(defaultImagePath))
-            {return;} // skip default avatar images
+            return; // skip default avatar images
         img.dataset.rinspDeferSrc = img.src;
         img.src = AVATAR_LOADING_PLACEHOLDER;
     });
@@ -18700,7 +18736,7 @@ const RESUME_IMG_LOAD_DELAY = 0;
 function resumeImageLoading(doc) {
     const lazy = isFastLoadLazyImageMode();
     setTimeout(() => {
-        if (DEBUG_MODE) {console.info('[STAGE] resumeImageLoading');}
+        if (DEBUG_MODE) console.info('[STAGE] resumeImageLoading');
         doc.querySelectorAll('img[data-rinsp-defer-src]').forEach(img => {
             if (lazy) {
                 img.setAttribute('loading', 'lazy');
@@ -18731,7 +18767,7 @@ function initWhenPageRootLoaded() {
             window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
                 applyDarkTheme();
             });
-        } catch  {}
+        } catch (ignore) {}
     }
     if (applyDarkTheme()) {
         // paint the canvas dark immediately (before <head>/<body> and the injected stylesheet exist)
@@ -18823,7 +18859,7 @@ function begin() {
         if (!document.documentElement || isAdminPage()) {
             return;
         }
-        if (DEBUG_MODE) {console.info('[STAGE] ' + document.readyState);}
+        if (DEBUG_MODE) console.info('[STAGE] ' + document.readyState);
         switch (document.readyState) {
             case "loading":
                 initWhenPageRootLoaded();

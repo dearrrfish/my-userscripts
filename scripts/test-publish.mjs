@@ -148,13 +148,13 @@ test('managed greasyfork-454120 publishes with valid metadata and candidate hash
   });
 
   assert.equal(res.scriptId, 'greasyfork-454120');
-  assert.equal(res.version, '100.0.2');
+  assert.equal(res.version, scriptDef.version);
 
   const userJsContent = await fs.readFile(res.userJsPath, 'utf8');
   const parsed = parseMetadata(userJsContent);
   assert.ok(parsed.valid);
   assert.equal(parsed.identity.name, '南加北加论坛强化脚本(凛+) [FM-Compat]');
-  assert.equal(parsed.entries.find(e => e.key === 'version')?.value, '100.0.2');
+  assert.equal(parsed.entries.find(e => e.key === 'version')?.value, scriptDef.version);
   assert.equal(parsed.entries.find(e => e.key === 'downloadURL')?.value, 'https://raw.githubusercontent.com/dearrrfish/my-userscripts/master/releases/greasyfork-454120.user.js');
 
   await fs.rm(tmpDir, { recursive: true, force: true });
